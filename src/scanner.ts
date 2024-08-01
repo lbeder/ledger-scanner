@@ -74,8 +74,7 @@ export class Scanner {
 
       ledgerAddresses[address] = { index, address, path: addressPath };
 
-      // const ethBalance = await this.balance.getBalance(address);
-      const ethBalance = new Decimal(5);
+      const ethBalance = await this.balance.getBalance(address);
       if (showEmptyAddresses || !ethBalance.isZero()) {
         set(amounts, [address, ETH], ethBalance);
       }
