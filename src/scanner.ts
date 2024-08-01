@@ -48,6 +48,10 @@ export class Scanner {
   }
 
   public async scan({ path, count, showEmptyAddresses }: ScanOptions) {
+    if (count === 0) {
+      throw new Error("Invalid count");
+    }
+
     Logger.info(`Scanning all addresses at path ${path}...`);
     Logger.info();
 
