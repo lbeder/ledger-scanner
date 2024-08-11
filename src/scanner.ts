@@ -120,7 +120,7 @@ export class Scanner {
         balances.push(amount.toCSVAmount());
       }
 
-      addressesTable.push([index.toString(), address, ...balances, path]);
+      addressesTable.push([(index + 1).toString(), address, ...balances, path]);
     }
 
     Logger.table(addressesTable);
