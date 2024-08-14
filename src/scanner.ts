@@ -115,12 +115,20 @@ export class Scanner {
       const balances: string[] = [];
 
       for (const symbol of tokens) {
+        if (addressAmounts === undefined) {
+          continue;
+        }
+
         const amount = addressAmounts[symbol] ?? new Decimal(0);
 
         balances.push(amount.toCSVAmount());
       }
 
-      addressesTable.push([(index + 1).toString(), address, ...balances, path]);
+      if (balances.length === 0) {
+        continue;
+      }
+
+      addressesTable.push([index.toString(), address, ...balances, path]);
     }
 
     Logger.table(addressesTable);
