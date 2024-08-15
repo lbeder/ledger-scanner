@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import yargs from "yargs";
 import "./utils/csv";
-import { DEFAULT_COUNT, DEFAULT_PATH_PREFIX, Scanner } from "./scanner";
+import { DEFAULT_COUNT, DEFAULT_PATH_PREFIX, DEFAULT_START, Scanner } from "./scanner";
 import { Logger } from "./utils/logger";
 
 const VERSION = "0.3.0";
@@ -45,6 +45,12 @@ const main = async () => {
             alias: "c",
             default: DEFAULT_COUNT
           },
+          start: {
+            description: "Starting index",
+            type: "number",
+            alias: "s",
+            default: DEFAULT_START
+          },
           "show-empty-addresses": {
             description: "Show empty addresses",
             alias: "e",
@@ -52,8 +58,8 @@ const main = async () => {
             default: false
           }
         },
-        async ({ path, count, showEmptyAddresses }) => {
-          await scanner.scan({ path, count, showEmptyAddresses });
+        async ({ path, start, count, showEmptyAddresses }) => {
+          await scanner.scan({ path, start, count, showEmptyAddresses });
         }
       )
       .parse();

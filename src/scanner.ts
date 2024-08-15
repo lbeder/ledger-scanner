@@ -11,6 +11,7 @@ import { ETH } from "./utils/constants";
 import { Logger } from "./utils/logger";
 
 export const DEFAULT_PATH_PREFIX = "m/44'/60'/0'";
+export const DEFAULT_START = 0;
 export const DEFAULT_COUNT = 100;
 
 interface ScannerOptions {
@@ -31,6 +32,7 @@ type LedgerAddresses = Record<Address, LedgerAddress>;
 
 interface ScanOptions {
   path: string;
+  start: number;
   count: number;
   showEmptyAddresses: boolean;
 }
@@ -47,12 +49,12 @@ export class Scanner {
     this.balance = new Balance(this.provider);
   }
 
-  public async scan({ path, count, showEmptyAddresses }: ScanOptions) {
+  public async scan({ path, start, count, showEmptyAddresses }: ScanOptions) {
     if (count === 0) {
       throw new Error("Invalid count");
     }
 
-    Logger.info(`Scanning all addresses at path ${path}...`);
+    Logger.info(`Scanning all addresses at path ${path}/X...`);
     Logger.info();
 
     const transport = await TransportNodeHid.create();
@@ -72,7 +74,7 @@ export class Scanner {
 
     const amounts: AddressAmounts = {};
 
-    for (let index = 0; index < count; ++index) {
+    for (let index = start; index < start + count; ++index) {
       const addressPath = `${path}/${index}`;
       const { address } = await appETH.getAddress(addressPath);
 
