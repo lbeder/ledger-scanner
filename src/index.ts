@@ -4,7 +4,7 @@ import "./utils/csv";
 import { DEFAULT_COUNT, DEFAULT_PATH_PREFIX, DEFAULT_START, Scanner } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 
 const main = async () => {
   let scanner: Scanner;
