@@ -34,7 +34,7 @@ const main = async () => {
         "Scan all addresses",
         {
           path: {
-            description: `Derivation path. For example ${DEFAULT_PATH_PREFIX} for ${DEFAULT_PATH_PREFIX}\\X paths`,
+            description: `Derivation path. For example ${DEFAULT_PATH_PREFIX} for ${DEFAULT_PATH_PREFIX}/X paths`,
             type: "string",
             alias: "p",
             default: DEFAULT_PATH_PREFIX
