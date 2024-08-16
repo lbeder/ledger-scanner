@@ -1,6 +1,6 @@
 {
   "name": "ledger-scanner",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Ledger Scanner is a privacy-oriented tool used to track ETH balances across Ledger Hardware Wallet devices",
   "author": "Leonid Beder",
   "license": "MIT",

@@ -12,7 +12,7 @@ import {
 } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 
 const main = async () => {
   let scanner: Scanner;
@@ -73,10 +73,24 @@ const main = async () => {
             alias: "e",
             type: "boolean",
             default: false
+          },
+          csv: {
+            description: "The CSV reports output directory (optional)",
+            type: "string",
+            alias: "r",
+            requiresArg: true
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, showEmptyAddresses }) => {
-          await scanner.scan({ path, addressCount, addressStart, pathCount, pathStart, showEmptyAddresses });
+        async ({ path, addressStart, addressCount, pathCount, pathStart, showEmptyAddresses, csv }) => {
+          await scanner.scan({
+            path,
+            addressCount,
+            addressStart,
+            pathCount,
+            pathStart,
+            showEmptyAddresses,
+            csvOutputDir: csv
+          });
         }
       )
       .parse();

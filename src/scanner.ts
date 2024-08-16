@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import AppETH from "@ledgerhq/hw-app-eth";
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 import chalk from "chalk";
@@ -14,7 +16,6 @@ export const ADDRESS_INDEX = "N";
 export const PATH_INDEX = "M";
 export const DEFAULT_ADDRESS_COUNT = 100;
 export const DEFAULT_PATH_COUNT = 1;
-
 export const DEFAULT_PATH_PREFIX = `m/44'/60'/${PATH_INDEX}'/${ADDRESS_INDEX}`;
 export const DEFAULT_START = 0;
 
@@ -41,13 +42,14 @@ interface ScanOptions {
   pathCount: number;
   pathStart: number;
   showEmptyAddresses: boolean;
+  csvOutputDir?: string;
 }
-
-export const DEFAULT_SYMBOL_PRICE = 1;
 
 export class Scanner {
   private provider: JsonRpcProvider;
   private balance: Balance;
+
+  private static readonly CSV_ADDRESSES_REPORT = "addresses.csv";
 
   constructor({ providerUrl }: ScannerOptions) {
     this.provider = new JsonRpcProvider(providerUrl);
@@ -55,7 +57,15 @@ export class Scanner {
     this.balance = new Balance(this.provider);
   }
 
-  public async scan({ path, addressStart, addressCount, pathCount, pathStart, showEmptyAddresses }: ScanOptions) {
+  public async scan({
+    path,
+    addressStart,
+    addressCount,
+    pathCount,
+    pathStart,
+    showEmptyAddresses,
+    csvOutputDir
+  }: ScanOptions) {
     if (addressCount === 0) {
       throw new Error("Invalid address count");
     }
@@ -123,6 +133,10 @@ export class Scanner {
     Logger.info();
 
     this.showAddresses(ledgerAddresses, amounts);
+
+    if (csvOutputDir) {
+      this.exportAddresses(csvOutputDir, ledgerAddresses);
+    }
   }
 
   private showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts) {
@@ -162,6 +176,31 @@ export class Scanner {
     }
 
     Logger.table(addressesTable);
+  }
+
+  private exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses) {
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    const outputPath = path.join(outputDir, Scanner.CSV_ADDRESSES_REPORT);
+    if (fs.existsSync(outputPath)) {
+      fs.rmSync(outputPath);
+    }
+
+    const headers = ["Index", "Address", "Path"];
+
+    fs.appendFileSync(outputPath, `${headers.join(",")}\n`);
+
+    if (isEmpty(ledgerAddresses)) {
+      return;
+    }
+
+    for (const ledgerAddress of Object.values(ledgerAddresses)) {
+      const { index, path, address } = ledgerAddress;
+
+      fs.appendFileSync(outputPath, `${[index, address, path].join(",")}\n`);
+    }
+
+    Logger.info(`Exported address data to: ${outputPath}`);
   }
 
   private static verifyPath(path: string, component: string) {
