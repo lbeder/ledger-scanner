@@ -10,9 +10,13 @@ import { Balance } from "./modules";
 import { ETH } from "./utils/constants";
 import { Logger } from "./utils/logger";
 
-export const DEFAULT_PATH_PREFIX = "m/44'/60'/0'";
+export const ADDRESS_INDEX = "N";
+export const PATH_INDEX = "M";
+export const DEFAULT_ADDRESS_COUNT = 100;
+export const DEFAULT_PATH_COUNT = 1;
+
+export const DEFAULT_PATH_PREFIX = `m/44'/60'/${PATH_INDEX}'/${ADDRESS_INDEX}`;
 export const DEFAULT_START = 0;
-export const DEFAULT_COUNT = 100;
 
 interface ScannerOptions {
   providerUrl: string;
@@ -32,8 +36,10 @@ type LedgerAddresses = Record<Address, LedgerAddress>;
 
 interface ScanOptions {
   path: string;
-  start: number;
-  count: number;
+  addressCount: number;
+  addressStart: number;
+  pathCount: number;
+  pathStart: number;
   showEmptyAddresses: boolean;
 }
 
@@ -49,12 +55,29 @@ export class Scanner {
     this.balance = new Balance(this.provider);
   }
 
-  public async scan({ path, start, count, showEmptyAddresses }: ScanOptions) {
-    if (count === 0) {
-      throw new Error("Invalid count");
+  public async scan({ path, addressStart, addressCount, pathCount, pathStart, showEmptyAddresses }: ScanOptions) {
+    if (addressCount === 0) {
+      throw new Error("Invalid address count");
     }
 
-    Logger.info(`Scanning all addresses at path ${path}/X...`);
+    if (pathCount === 0) {
+      throw new Error("Invalid path count");
+    }
+
+    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
+      throw new Error("Missing address index component");
+    }
+
+    if (!Scanner.verifyPath(path, PATH_INDEX)) {
+      throw new Error("Missing path index component");
+    }
+
+    Logger.info(`Scanning all addresses at path ${path}...`);
+    Logger.info();
+    Logger.notice(`  Address count: ${addressCount}`);
+    Logger.notice(`  Address start: ${addressStart}`);
+    Logger.notice(`  Path count: ${pathCount}`);
+    Logger.notice(`  Path start: ${pathStart}`);
     Logger.info();
 
     const transport = await TransportNodeHid.create();
@@ -70,25 +93,30 @@ export class Scanner {
       CliProgress.Presets.shades_classic
     );
 
-    const ledgerBar = multiBar.create(count, 0);
+    const ledgerBar = multiBar.create(addressCount * pathCount, 0);
 
     const amounts: AddressAmounts = {};
 
-    for (let index = start; index < start + count; ++index) {
-      const addressPath = `${path}/${index}`;
-      const { address } = await appETH.getAddress(addressPath);
+    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
+      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
 
-      ledgerAddresses[address] = { index, address, path: addressPath };
+      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
+        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
 
-      const ethBalance = await this.balance.getBalance(address);
-      if (showEmptyAddresses || !ethBalance.isZero()) {
-        set(amounts, [address, ETH], ethBalance);
+        const { address } = await appETH.getAddress(addressDerivationPath);
+
+        ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
+
+        const ethBalance = await this.balance.getBalance(address);
+        if (showEmptyAddresses || !ethBalance.isZero()) {
+          set(amounts, [address, ETH], ethBalance);
+        }
+
+        ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
       }
-
-      ledgerBar.increment(1, { label: `${addressPath} | ${address}` });
     }
 
-    ledgerBar.update(count, { label: "Finished" });
+    ledgerBar.update(addressCount, { label: "Finished" });
 
     multiBar.stop();
 
@@ -134,5 +162,11 @@ export class Scanner {
     }
 
     Logger.table(addressesTable);
+  }
+
+  private static verifyPath(path: string, component: string) {
+    const regex = new RegExp(`/${component}[/']?|/${component}['"]?$`);
+
+    return regex.test(path);
   }
 }
