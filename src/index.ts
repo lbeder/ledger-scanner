@@ -12,7 +12,7 @@ import {
 } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.6.0";
+const VERSION = "0.7.0";
 
 const main = async () => {
   let scanner: Scanner;

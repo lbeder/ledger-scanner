@@ -49,6 +49,7 @@ export class Scanner {
   private provider: JsonRpcProvider;
   private balance: Balance;
 
+  private static readonly BALANCES_BATCH = 100;
   private static readonly CSV_ADDRESSES_REPORT = "addresses.csv";
 
   constructor({ providerUrl }: ScannerOptions) {
@@ -110,6 +111,8 @@ export class Scanner {
     for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
       const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
 
+      const balancePromises: Promise<void>[] = [];
+
       for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
         const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
 
@@ -117,12 +120,26 @@ export class Scanner {
 
         ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
 
-        const ethBalance = await this.balance.getBalance(address);
-        if (showEmptyAddresses || !ethBalance.isZero()) {
-          set(amounts, [address, ETH], ethBalance);
-        }
+        const promise = this.balance.getBalance(address).then((ethBalance) => {
+          if (showEmptyAddresses || !ethBalance.isZero()) {
+            set(amounts, [address, ETH], ethBalance);
+          }
 
-        ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+          ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+        });
+
+        balancePromises.push(promise);
+
+        if (balancePromises.length >= Scanner.BALANCES_BATCH) {
+          await Promise.all(balancePromises);
+
+          balancePromises.length = 0;
+        }
+      }
+
+      // Await any remaining promises
+      if (balancePromises.length > 0) {
+        await Promise.all(balancePromises);
       }
     }
 
