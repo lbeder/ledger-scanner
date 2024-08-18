@@ -62,6 +62,6 @@ Options:
       --address-start         Starting address index                                               [number] [default: 0]
       --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
       --path-start            Starting path index                                                  [number] [default: 0]
-  -e, --show-empty-addresses  Show empty addresses                                            [boolean] [default: false]
+  -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
   -r, --csv                   The CSV reports output directory (optional)                                       [string]
 ```

@@ -12,7 +12,7 @@ import {
 } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 
 const main = async () => {
   let scanner: Scanner;
@@ -68,9 +68,9 @@ const main = async () => {
             type: "number",
             default: DEFAULT_START
           },
-          "show-empty-addresses": {
-            description: "Show empty addresses",
-            alias: "e",
+          "hide-empty-addresses": {
+            description: "Hide empty addresses",
+            alias: "h",
             type: "boolean",
             default: false
           },
@@ -81,14 +81,14 @@ const main = async () => {
             requiresArg: true
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, showEmptyAddresses, csv }) => {
+        async ({ path, addressStart, addressCount, pathCount, pathStart, hideEmptyAddresses, csv }) => {
           await scanner.scan({
             path,
             addressCount,
             addressStart,
             pathCount,
             pathStart,
-            showEmptyAddresses,
+            hideEmptyAddresses,
             csvOutputDir: csv
           });
         }

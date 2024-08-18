@@ -41,7 +41,7 @@ interface ScanOptions {
   addressStart: number;
   pathCount: number;
   pathStart: number;
-  showEmptyAddresses: boolean;
+  hideEmptyAddresses: boolean;
   csvOutputDir?: string;
 }
 
@@ -64,7 +64,7 @@ export class Scanner {
     addressCount,
     pathCount,
     pathStart,
-    showEmptyAddresses,
+    hideEmptyAddresses,
     csvOutputDir
   }: ScanOptions) {
     if (addressCount === 0) {
@@ -121,7 +121,7 @@ export class Scanner {
         ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
 
         const promise = this.balance.getBalance(address).then((ethBalance) => {
-          if (showEmptyAddresses || !ethBalance.isZero()) {
+          if (!hideEmptyAddresses || !ethBalance.isZero()) {
             set(amounts, [address, ETH], ethBalance);
           }
 
