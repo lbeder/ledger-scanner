@@ -12,7 +12,7 @@ import {
 } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.8.0";
+const VERSION = "0.9.0";
 
 const main = async () => {
   let scanner: Scanner;
@@ -74,6 +74,12 @@ const main = async () => {
             type: "boolean",
             default: false
           },
+          "skip-balance": {
+            description: "Skip ETH balance check",
+            alias: "i",
+            type: "boolean",
+            default: false
+          },
           csv: {
             description: "The CSV reports output directory (optional)",
             type: "string",
@@ -81,7 +87,7 @@ const main = async () => {
             requiresArg: true
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, hideEmptyAddresses, csv }) => {
+        async ({ path, addressStart, addressCount, pathCount, pathStart, hideEmptyAddresses, skipBalance, csv }) => {
           await scanner.scan({
             path,
             addressCount,
@@ -89,6 +95,7 @@ const main = async () => {
             pathCount,
             pathStart,
             hideEmptyAddresses,
+            skipBalance,
             csvOutputDir: csv
           });
         }

@@ -42,6 +42,7 @@ interface ScanOptions {
   pathCount: number;
   pathStart: number;
   hideEmptyAddresses: boolean;
+  skipBalance: boolean;
   csvOutputDir?: string;
 }
 
@@ -65,6 +66,7 @@ export class Scanner {
     pathCount,
     pathStart,
     hideEmptyAddresses,
+    skipBalance,
     csvOutputDir
   }: ScanOptions) {
     if (addressCount === 0) {
@@ -118,14 +120,24 @@ export class Scanner {
 
         const { address } = await appETH.getAddress(addressDerivationPath);
 
-        ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
-
-        const promise = this.balance.getBalance(address).then((ethBalance) => {
-          if (!hideEmptyAddresses || !ethBalance.isZero()) {
-            set(amounts, [address, ETH], ethBalance);
-          }
+        if (skipBalance) {
+          ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
 
           ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+
+          continue;
+        }
+
+        const promise = this.balance.getBalance(address).then((ethBalance) => {
+          ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+
+          if (ethBalance.isZero() && hideEmptyAddresses) {
+            return;
+          }
+
+          set(amounts, [address, ETH], ethBalance);
+
+          ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
         });
 
         balancePromises.push(promise);
@@ -149,22 +161,24 @@ export class Scanner {
 
     Logger.info();
 
-    this.showAddresses(ledgerAddresses, amounts);
+    this.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
       this.exportAddresses(csvOutputDir, ledgerAddresses);
     }
   }
 
-  private showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts) {
-    if (isEmpty(amounts)) {
+  private showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts, showBalance: boolean) {
+    if (isEmpty(Object.keys(ledgerAddresses))) {
+      Logger.info("No addresses to show");
+
       return;
     }
 
     Logger.title("Addresses");
 
-    const tokens = [ETH];
-    const tokenHead = tokens.map((symbol) => chalk.cyanBright(symbol));
+    const tokens = showBalance ? [ETH] : [];
+    const tokenHead = showBalance ? tokens.map((symbol) => chalk.cyanBright(symbol)) : [];
     const addressesTable = new Table({
       head: [chalk.cyanBright("Index"), chalk.cyanBright("Address"), ...tokenHead, chalk.cyanBright("Path")],
       colAligns: ["middle", "middle", ...Array(tokenHead.length).fill("middle"), "middle"]
@@ -175,18 +189,12 @@ export class Scanner {
       const addressAmounts = amounts[address];
       const balances: string[] = [];
 
-      for (const symbol of tokens) {
-        if (addressAmounts === undefined) {
-          continue;
+      if (showBalance) {
+        for (const symbol of tokens) {
+          const amount = addressAmounts[symbol] ?? new Decimal(0);
+
+          balances.push(amount.toCSVAmount());
         }
-
-        const amount = addressAmounts[symbol] ?? new Decimal(0);
-
-        balances.push(amount.toCSVAmount());
-      }
-
-      if (balances.length === 0) {
-        continue;
       }
 
       addressesTable.push([index.toString(), address, ...balances, path]);

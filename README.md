@@ -63,5 +63,6 @@ Options:
       --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
       --path-start            Starting path index                                                  [number] [default: 0]
   -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
+  -i, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -r, --csv                   The CSV reports output directory (optional)                                       [string]
 ```
