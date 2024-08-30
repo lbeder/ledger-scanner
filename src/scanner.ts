@@ -87,10 +87,13 @@ export class Scanner {
 
     Logger.info(`Scanning all addresses at path ${path}...`);
     Logger.info();
-    Logger.notice(
-      `  Address Indexes: [${addressStart} - ${addressStart + addressCount - 1}] (total of ${addressCount})`
-    );
-    Logger.notice(`  Path Indexes: [${pathStart} - ${pathStart + pathCount - 1}] (total of ${pathCount})`);
+
+    const addressIndexes =
+      addressCount === 1 ? `${addressStart}` : `${addressStart}...${addressStart + addressCount - 1}`;
+    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+
+    Logger.notice(`  Address Indexes: ${addressIndexes} (total of ${addressCount})`);
+    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
     Logger.info();
 
     const transport = await TransportNodeHid.create();
