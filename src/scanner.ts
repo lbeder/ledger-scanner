@@ -137,7 +137,7 @@ export class Scanner {
 
           set(amounts, [address, ETH], ethBalance);
 
-          ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
+          ledgerAddresses[address] = { index: addressIndex + 1, address, path: addressDerivationPath };
         });
 
         balancePromises.push(promise);
