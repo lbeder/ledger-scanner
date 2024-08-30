@@ -100,7 +100,7 @@ export class Scanner {
 
     const multiBar = new CliProgress.MultiBar(
       {
-        format: " {label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
+        format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
         autopadding: true
       },
       CliProgress.Presets.shades_classic
