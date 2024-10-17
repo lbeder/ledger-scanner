@@ -26,6 +26,9 @@ importers:
       ethers:
         specifier: ^6.11.0
         version: 6.13.2
+      hdkey:
+        specifier: ^2.1.0
+        version: 2.1.0
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -45,6 +48,9 @@ importers:
       '@types/cli-table':
         specifier: ^0.3.4
         version: 0.3.4
+      '@types/hdkey':
+        specifier: ^2.0.3
+        version: 2.0.3
       '@types/lodash':
         specifier: ^4.14.202
         version: 4.17.7
@@ -412,6 +418,9 @@ packages:
 
   '@types/cli-table@0.3.4':
     resolution: {integrity: sha512-GsALrTL69mlwbAw/MHF1IPTadSLZQnsxe7a80G8l4inN/iEXCOcVeT/S7aRc6hbhqzL9qZ314kHPDQnQ3ev+HA==}
+
+  '@types/hdkey@2.0.3':
+    resolution: {integrity: sha512-U5W3b+f3KqCC7tge4WjV5MDzzYTcwbnufyL7RwEmxH2EyxtbfaQVlS8z6PZDp8XET304EEVhLWG76rF5ygUKHQ==}
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
@@ -1161,6 +1170,9 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
+  hdkey@2.1.0:
+    resolution: {integrity: sha512-i9Wzi0Dy49bNS4tXXeGeu0vIcn86xXdPQUpEYg+SO1YiO8HtomjmmRMaRyqL0r59QfcD4PfVbSF3qmsWFwAemA==}
+
   hmac-drbg@1.0.1:
     resolution: {integrity: sha512-Tti3gMqLdZfhOQY1Mzf/AanLiqh1WTiJgEj26ZuYQ9fbkLomzGchCws4FyrSd4VkpBfiNhaE1On+lOz894jvXg==}
 
@@ -1616,6 +1628,10 @@ packages:
 
   scrypt-js@3.0.1:
     resolution: {integrity: sha512-cdwTTnqPu0Hyvf5in5asVdZocVDTNRmR7XEcJuIzMjJeSHybHl7vpB66AzwTaIg6CLSbtjcxc8fqcySfnTkccA==}
+
+  secp256k1@4.0.3:
+    resolution: {integrity: sha512-NLZVf+ROMxwtEj3Xa562qgv2BK5e2WNmXPiOdVIPLgs6lyTzMvBq0aWTYMI5XCP9jZMVKOcqZLw/Wc4vDkuxhA==}
+    engines: {node: '>=10.0.0'}
 
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
@@ -2495,6 +2511,10 @@ snapshots:
       '@types/node': 22.1.0
 
   '@types/cli-table@0.3.4': {}
+
+  '@types/hdkey@2.0.3':
+    dependencies:
+      '@types/node': 22.1.0
 
   '@types/json5@0.0.29': {}
 
@@ -3424,6 +3444,13 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  hdkey@2.1.0:
+    dependencies:
+      bs58check: 2.1.2
+      ripemd160: 2.0.2
+      safe-buffer: 5.2.1
+      secp256k1: 4.0.3
+
   hmac-drbg@1.0.1:
     dependencies:
       hash.js: 1.1.7
@@ -3870,6 +3897,12 @@ snapshots:
       loose-envify: 1.4.0
 
   scrypt-js@3.0.1: {}
+
+  secp256k1@4.0.3:
+    dependencies:
+      elliptic: 6.5.4
+      node-addon-api: 2.0.2
+      node-gyp-build: 4.8.1
 
   semver@6.3.1: {}
 

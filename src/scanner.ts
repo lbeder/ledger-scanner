@@ -6,7 +6,8 @@ import chalk from "chalk";
 import CliProgress from "cli-progress";
 import Table from "cli-table";
 import Decimal from "decimal.js";
-import { JsonRpcProvider } from "ethers";
+import { computeAddress, getAddress, hexlify, JsonRpcProvider } from "ethers";
+import HDKey from "hdkey";
 import { isEmpty, set } from "lodash";
 import { Balance } from "./modules";
 import { ETH } from "./utils/constants";
@@ -118,10 +119,27 @@ export class Scanner {
 
       const balancePromises: Promise<void>[] = [];
 
-      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
-        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
+      const { publicKey, chainCode } = await appETH.getAddress(
+        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+        false,
+        true
+      );
+      if (!chainCode) {
+        throw new Error("Invalid chain code");
+      }
 
-        const { address } = await appETH.getAddress(addressDerivationPath);
+      const addresses = [];
+
+      const hdk = new HDKey();
+      hdk.publicKey = Buffer.from(publicKey, "hex");
+      hdk.chainCode = Buffer.from(chainCode, "hex");
+
+      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
+        addresses.push(Scanner.derive(hdk, addressIndex));
+      }
+
+      for (const [addressIndex, address] of addresses.entries()) {
+        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
 
         if (skipBalance) {
           ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
@@ -235,5 +253,12 @@ export class Scanner {
     const regex = new RegExp(`/${component}[/']?|/${component}['"]?$`);
 
     return regex.test(path);
+  }
+
+  private static derive(hdk: HDKey, index: number) {
+    const derivedKey = hdk.derive(`m/${index}`);
+    const address = computeAddress(`0x${derivedKey.publicKey.toString("hex")}`);
+
+    return getAddress(hexlify(address));
   }
 }

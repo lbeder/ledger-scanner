@@ -1,6 +1,6 @@
 {
   "name": "ledger-scanner",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Ledger Scanner is a privacy-focused tool designed for enumerating Ledger wallet addresses based on custom derivation path templates",
   "author": "Leonid Beder",
   "license": "MIT",
@@ -26,6 +26,7 @@
     "@snyk/protect": "^1.1292.2",
     "@types/cli-progress": "^3.11.5",
     "@types/cli-table": "^0.3.4",
+    "@types/hdkey": "^2.0.3",
     "@types/lodash": "^4.14.202",
     "@types/node": "^22.1.0",
     "@types/yargs": "^17.0.33",
@@ -50,6 +51,7 @@
     "cli-table": "^0.3.11",
     "decimal.js": "^10.4.3",
     "ethers": "^6.11.0",
+    "hdkey": "^2.1.0",
     "lodash": "^4.17.21",
     "yargs": "^17.7.2"
   }
