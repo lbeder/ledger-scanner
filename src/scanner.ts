@@ -128,21 +128,21 @@ export class Scanner {
         throw new Error("Invalid chain code");
       }
 
-      const addresses = [];
+      const addresses: Record<number, string> = {};
 
       const hdk = new HDKey();
       hdk.publicKey = Buffer.from(publicKey, "hex");
       hdk.chainCode = Buffer.from(chainCode, "hex");
 
       for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
-        addresses.push(Scanner.derive(hdk, addressIndex));
+        addresses[addressIndex] = Scanner.derive(hdk, addressIndex);
       }
 
-      for (const [addressIndex, address] of addresses.entries()) {
-        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
+      for (const [addressIndex, address] of Object.entries(addresses)) {
+        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex);
 
         if (skipBalance) {
-          ledgerAddresses[address] = { index: addressIndex, address, path: addressDerivationPath };
+          ledgerAddresses[address] = { index: Number(addressIndex) + 1, address, path: addressDerivationPath };
 
           ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
 
@@ -158,7 +158,7 @@ export class Scanner {
 
           set(amounts, [address, ETH], ethBalance);
 
-          ledgerAddresses[address] = { index: addressIndex + 1, address, path: addressDerivationPath };
+          ledgerAddresses[address] = { index: Number(addressIndex) + 1, address, path: addressDerivationPath };
         });
 
         balancePromises.push(promise);
