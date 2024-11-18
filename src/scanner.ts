@@ -15,7 +15,7 @@ import { Logger } from "./utils/logger";
 
 export const ADDRESS_INDEX = "N";
 export const PATH_INDEX = "M";
-export const DEFAULT_ADDRESS_COUNT = 100;
+export const DEFAULT_ADDRESS_COUNT = 500;
 export const DEFAULT_PATH_COUNT = 1;
 export const DEFAULT_PATH_PREFIX = `m/44'/60'/${PATH_INDEX}'/${ADDRESS_INDEX}`;
 export const DEFAULT_START = 0;

@@ -58,7 +58,7 @@ Options:
   -p, --path                  Derivation path template. The path template should specify the address index (the "N"
                               component) and the path index (the "M" component). For example m/44'/60'/M'/N for standard
                               paths                                                 [string] [default: "m/44'/60'/M'/N"]
-      --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 100]
+      --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
       --address-start         Starting address index                                               [number] [default: 0]
       --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
       --path-start            Starting path index                                                  [number] [default: 0]
