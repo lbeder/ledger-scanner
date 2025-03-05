@@ -47,6 +47,22 @@ This will also allow you to run the `ledger-scanner` in the terminal.
 ### General
 
 ```sh
+ledger-scanner <command>
+
+Commands:
+  ledger-scanner scan            Scan all addresses
+  ledger-scanner export-pubkeys  Export all public keys and chain codes
+  ledger-scanner scan-pubkeys    Scan all addresses via the provided public keys and chain codes file
+
+Options:
+  --help          Show help                                                                                    [boolean]
+  --version       Show version number                                                                          [boolean]
+  --provider-url  Web3 provider's URL                                        [string] [default: "http://localhost:8545"]
+```
+
+#### Scanning All Addresses
+
+```sh
 ledger-scanner scan
 
 Scan all addresses
@@ -63,6 +79,44 @@ Options:
       --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
       --path-start            Starting path index                                                  [number] [default: 0]
   -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
-  -i, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
+  -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
+  -r, --csv                   The CSV reports output directory (optional)                                       [string]
+```
+
+#### Export All Public Keys and Chain Codes
+
+```sh
+ledger-scanner export-pubkeys
+
+Export all public keys and chain codes
+
+Options:
+      --help          Show help                                                                                [boolean]
+      --version       Show version number                                                                      [boolean]
+      --provider-url  Web3 provider's URL                                    [string] [default: "http://localhost:8545"]
+  -p, --path          Derivation path template. The path template should specify the address index (the "N" component)
+                      and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
+                                                                                    [string] [default: "m/44'/60'/M'/N"]
+      --path-count    Number of paths to derive and check (the "M" component)                      [number] [default: 1]
+      --path-start    Starting path index                                                          [number] [default: 0]
+  -o, --output        The CSV output path (optional)                                                            [string]
+```
+
+#### Scan All Addresses via the Provided Public Keys and Chain Codes File
+
+```sh
+ledger-scanner scan-pubkeys
+
+Scan all addresses via the provided public keys and chain codes file
+
+Options:
+      --help                  Show help                                                                        [boolean]
+      --version               Show version number                                                              [boolean]
+      --provider-url          Web3 provider's URL                            [string] [default: "http://localhost:8545"]
+      --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
+      --address-start         Starting address index                                               [number] [default: 0]
+  -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
+  -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
+  -i, --input                 The CSV input path                                                     [string] [required]
   -r, --csv                   The CSV reports output directory (optional)                                       [string]
 ```

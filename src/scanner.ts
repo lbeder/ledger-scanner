@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import * as readline from "readline";
 import AppETH from "@ledgerhq/hw-app-eth";
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
 import chalk from "chalk";
@@ -47,6 +48,40 @@ interface ScanOptions {
   csvOutputDir?: string;
 }
 
+interface ExportPubKeysOptions {
+  path: string;
+  pathCount: number;
+  pathStart: number;
+  outputPath?: string;
+}
+
+interface ScanPubkeysOptions {
+  addressCount: number;
+  addressStart: number;
+  hideEmptyAddresses: boolean;
+  skipBalance: boolean;
+  inputPath: string;
+  csvOutputDir?: string;
+}
+
+type PubkeyData = {
+  publicKey: string;
+  chainCode: string;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+type PathData = Record<string, PubkeyData | {}>;
+
+interface InternalScanOptions {
+  paths: PathData;
+  pubkeyData?: PubkeyData[];
+  addressCount: number;
+  addressStart: number;
+  hideEmptyAddresses: boolean;
+  skipBalance: boolean;
+  csvOutputDir?: string;
+}
+
 export class Scanner {
   private provider: JsonRpcProvider;
   private balance: Balance;
@@ -60,7 +95,7 @@ export class Scanner {
     this.balance = new Balance(this.provider);
   }
 
-  public async scan({
+  public scan({
     path,
     addressStart,
     addressCount,
@@ -86,7 +121,7 @@ export class Scanner {
       throw new Error("Missing path index component");
     }
 
-    Logger.info(`Scanning all addresses at path ${path}...`);
+    Logger.info(`Scanning all addresses starting from path ${path}...`);
     Logger.info();
 
     const addressIndexes =
@@ -97,6 +132,131 @@ export class Scanner {
     Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
     Logger.info();
 
+    const paths: PathData = {};
+
+    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
+      paths[path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString())] = {};
+    }
+
+    return this.internalScan({ paths, addressStart, addressCount, hideEmptyAddresses, skipBalance, csvOutputDir });
+  }
+
+  public async exportPubkeys({ path, pathCount, pathStart, outputPath }: ExportPubKeysOptions) {
+    if (pathCount === 0) {
+      throw new Error("Invalid path count");
+    }
+
+    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
+      throw new Error("Missing address index component");
+    }
+
+    if (!Scanner.verifyPath(path, PATH_INDEX)) {
+      throw new Error("Missing path index component");
+    }
+
+    Logger.info(`Exporting all public keys and chain codes starting from path ${path}...`);
+    Logger.info();
+
+    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+
+    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
+    Logger.info();
+
+    const transport = await TransportNodeHid.create();
+    const appETH = new AppETH(transport);
+
+    const multiBar = new CliProgress.MultiBar(
+      {
+        format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
+        autopadding: true
+      },
+      CliProgress.Presets.shades_classic
+    );
+
+    const progressBar = multiBar.create(pathCount, 0);
+
+    const data: Record<string, PubkeyData> = {};
+
+    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
+      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
+
+      const { publicKey, chainCode } = await appETH.getAddress(
+        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+        false,
+        true
+      );
+      if (!chainCode) {
+        throw new Error("Invalid chain code");
+      }
+
+      data[derivationPath] = { publicKey, chainCode };
+    }
+
+    progressBar.update(pathCount, { label: "Finished" });
+
+    multiBar.stop();
+
+    Logger.info();
+
+    Scanner.showPublicKeys(data);
+
+    if (outputPath) {
+      Scanner.exportPublicKeys(outputPath, data);
+    }
+  }
+
+  public async scanPubkeys({
+    addressStart,
+    addressCount,
+    hideEmptyAddresses,
+    skipBalance,
+    inputPath,
+    csvOutputDir
+  }: ScanPubkeysOptions) {
+    if (addressCount === 0) {
+      throw new Error("Invalid address count");
+    }
+
+    Logger.info(`Scanning all addresses from public keys and chain codes file ${inputPath}...`);
+    Logger.info();
+
+    const fileStream = fs.createReadStream(inputPath);
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    });
+
+    let isFirstLine = true;
+
+    const paths: Record<string, PubkeyData> = {};
+
+    for await (const line of rl) {
+      if (isFirstLine) {
+        isFirstLine = false;
+
+        continue;
+      }
+
+      const [publicKey, chainCode, path] = line.split(",");
+
+      if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
+        throw new Error("Missing address index component");
+      }
+
+      paths[path] = { publicKey, chainCode };
+    }
+
+    this.internalScan({ paths, addressStart, addressCount, hideEmptyAddresses, skipBalance, csvOutputDir });
+  }
+
+  private async internalScan({
+    paths,
+    addressStart,
+    addressCount,
+    hideEmptyAddresses,
+    skipBalance,
+    csvOutputDir
+  }: InternalScanOptions) {
     const transport = await TransportNodeHid.create();
     const appETH = new AppETH(transport);
 
@@ -110,22 +270,29 @@ export class Scanner {
       CliProgress.Presets.shades_classic
     );
 
-    const ledgerBar = multiBar.create(addressCount * pathCount, 0);
+    const pathCount = Object.keys(paths).length;
+    const progressBar = multiBar.create(addressCount * pathCount, 0);
 
     const amounts: AddressAmounts = {};
 
-    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
-      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
-
+    for (const [path, pubkeyData] of Object.entries(paths)) {
       const balancePromises: Promise<void>[] = [];
 
-      const { publicKey, chainCode } = await appETH.getAddress(
-        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
-        false,
-        true
-      );
-      if (!chainCode) {
-        throw new Error("Invalid chain code");
+      let publicKey: string;
+      let chainCode: string | undefined;
+
+      if (isEmpty(pubkeyData)) {
+        ({ publicKey, chainCode } = await appETH.getAddress(
+          path.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+          false,
+          true
+        ));
+
+        if (!chainCode) {
+          throw new Error("Invalid chain code");
+        }
+      } else {
+        ({ publicKey, chainCode } = pubkeyData as any as PubkeyData);
       }
 
       const addresses: Record<number, string> = {};
@@ -139,18 +306,18 @@ export class Scanner {
       }
 
       for (const [addressIndex, address] of Object.entries(addresses)) {
-        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex);
+        const addressDerivationPath = path.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex);
 
         if (skipBalance) {
           ledgerAddresses[address] = { index: Number(addressIndex) + 1, address, path: addressDerivationPath };
 
-          ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
 
           continue;
         }
 
         const promise = this.balance.getBalance(address).then((ethBalance) => {
-          ledgerBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
 
           if (ethBalance.isZero() && hideEmptyAddresses) {
             return;
@@ -176,20 +343,20 @@ export class Scanner {
       }
     }
 
-    ledgerBar.update(addressCount, { label: "Finished" });
+    progressBar.update(addressCount * pathCount, { label: "Finished" });
 
     multiBar.stop();
 
     Logger.info();
 
-    this.showAddresses(ledgerAddresses, amounts, !skipBalance);
+    Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
-      this.exportAddresses(csvOutputDir, ledgerAddresses);
+      Scanner.exportAddresses(csvOutputDir, ledgerAddresses);
     }
   }
 
-  private showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts, showBalance: boolean) {
+  private static showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts, showBalance: boolean) {
     if (isEmpty(Object.keys(ledgerAddresses))) {
       Logger.info("No addresses to show");
 
@@ -224,7 +391,7 @@ export class Scanner {
     Logger.table(addressesTable);
   }
 
-  private exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses) {
+  private static exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses) {
     fs.mkdirSync(outputDir, { recursive: true });
 
     const outputPath = path.join(outputDir, Scanner.CSV_ADDRESSES_REPORT);
@@ -244,6 +411,47 @@ export class Scanner {
       const { index, path, address } = ledgerAddress;
 
       fs.appendFileSync(outputPath, `${[index, address, path].join(",")}\n`);
+    }
+
+    Logger.info(`Exported address data to: ${outputPath}`);
+  }
+
+  private static showPublicKeys(data: Record<string, PubkeyData>) {
+    if (isEmpty(Object.keys(data))) {
+      Logger.info("No public keys to show");
+
+      return;
+    }
+
+    Logger.title("Public Keys");
+
+    const dataTable = new Table({
+      head: [chalk.cyanBright("Public Key"), chalk.cyanBright("Chain Code"), chalk.cyanBright("Path")],
+      colAligns: ["middle", "middle", "middle"]
+    });
+
+    for (const [path, { publicKey, chainCode }] of Object.entries(data)) {
+      dataTable.push([publicKey, chainCode, path]);
+    }
+
+    Logger.table(dataTable);
+  }
+
+  private static exportPublicKeys(outputPath: string, data: Record<string, PubkeyData>) {
+    if (fs.existsSync(outputPath)) {
+      fs.rmSync(outputPath);
+    }
+
+    const headers = ["Public Key", "Chain Code", "Data"];
+
+    fs.appendFileSync(outputPath, `${headers.join(",")}\n`);
+
+    if (isEmpty(data)) {
+      return;
+    }
+
+    for (const [path, { publicKey, chainCode }] of Object.entries(data)) {
+      fs.appendFileSync(outputPath, `${[publicKey, chainCode, path].join(",")}\n`);
     }
 
     Logger.info(`Exported address data to: ${outputPath}`);

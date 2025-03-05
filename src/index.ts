@@ -12,7 +12,7 @@ import {
 } from "./scanner";
 import { Logger } from "./utils/logger";
 
-const VERSION = "0.9.0";
+const VERSION = "0.13.0";
 
 const main = async () => {
   let scanner: Scanner;
@@ -76,15 +76,14 @@ const main = async () => {
           },
           "skip-balance": {
             description: "Skip ETH balance check",
-            alias: "i",
+            alias: "s",
             type: "boolean",
             default: false
           },
           csv: {
             description: "The CSV reports output directory (optional)",
             type: "string",
-            alias: "r",
-            requiresArg: true
+            alias: "r"
           }
         },
         async ({ path, addressStart, addressCount, pathCount, pathStart, hideEmptyAddresses, skipBalance, csv }) => {
@@ -96,6 +95,91 @@ const main = async () => {
             pathStart,
             hideEmptyAddresses,
             skipBalance,
+            csvOutputDir: csv
+          });
+        }
+      )
+      .command(
+        "export-pubkeys",
+        "Export all public keys and chain codes ",
+        {
+          path: {
+            // eslint-disable-next-line max-len
+            description: `Derivation path template. The path template should specify the address index (the "${ADDRESS_INDEX}" component) and the path index (the "${PATH_INDEX}" component). For example ${DEFAULT_PATH_PREFIX} for standard paths`,
+            type: "string",
+            alias: "p",
+            default: DEFAULT_PATH_PREFIX
+          },
+          "path-count": {
+            description: `Number of paths to derive and check (the "${PATH_INDEX}" component)`,
+            type: "number",
+            default: DEFAULT_PATH_COUNT
+          },
+          "path-start": {
+            description: "Starting path index",
+            type: "number",
+            default: DEFAULT_START
+          },
+          output: {
+            description: "The CSV output path (optional)",
+            type: "string",
+            alias: "o"
+          }
+        },
+        async ({ path, pathCount, pathStart, output }) => {
+          await scanner.exportPubkeys({
+            path,
+            pathCount,
+            pathStart,
+            outputPath: output
+          });
+        }
+      )
+      .command(
+        "scan-pubkeys",
+        "Scan all addresses via the provided public keys and chain codes file",
+        {
+          "address-count": {
+            description: `Number of addresses to derive and check (the "${ADDRESS_INDEX}" component)`,
+            type: "number",
+            default: DEFAULT_ADDRESS_COUNT
+          },
+          "address-start": {
+            description: "Starting address index",
+            type: "number",
+            default: DEFAULT_START
+          },
+          "hide-empty-addresses": {
+            description: "Hide empty addresses",
+            alias: "h",
+            type: "boolean",
+            default: false
+          },
+          "skip-balance": {
+            description: "Skip ETH balance check",
+            alias: "s",
+            type: "boolean",
+            default: false
+          },
+          input: {
+            description: "The CSV input path",
+            type: "string",
+            alias: "i",
+            required: true
+          },
+          csv: {
+            description: "The CSV reports output directory (optional)",
+            type: "string",
+            alias: "r"
+          }
+        },
+        async ({ addressStart, addressCount, hideEmptyAddresses, skipBalance, input, csv }) => {
+          await scanner.scanPubkeys({
+            addressCount,
+            addressStart,
+            hideEmptyAddresses,
+            skipBalance,
+            inputPath: input,
             csvOutputDir: csv
           });
         }
