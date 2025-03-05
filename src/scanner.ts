@@ -257,6 +257,10 @@ export class Scanner {
 
   private static derive(hdk: HDKey, index: number) {
     const derivedKey = hdk.derive(`m/${index}`);
+    if (!derivedKey.publicKey) {
+      throw new Error("Invalid derived key");
+    }
+
     const address = computeAddress(`0x${derivedKey.publicKey.toString("hex")}`);
 
     return getAddress(hexlify(address));
