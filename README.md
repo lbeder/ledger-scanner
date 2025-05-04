@@ -57,7 +57,7 @@ Commands:
 Options:
   --help          Show help                                                                                    [boolean]
   --version       Show version number                                                                          [boolean]
-  --provider-url  Web3 provider's URL                                        [string] [default: "http://localhost:8545"]
+  --rpc           Web3 provider's URL                                        [string] [default: "http://localhost:8545"]
 ```
 
 #### Scanning All Addresses
@@ -70,7 +70,7 @@ Scan all addresses
 Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
-      --provider-url          Web3 provider's URL                            [string] [default: "http://localhost:8545"]
+      --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
   -p, --path                  Derivation path template. The path template should specify the address index (the "N"
                               component) and the path index (the "M" component). For example m/44'/60'/M'/N for standard
                               paths                                                 [string] [default: "m/44'/60'/M'/N"]
@@ -83,6 +83,7 @@ Options:
                               -h true.                                                       [string] [default: "false"]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -r, --csv                   The CSV reports output directory (optional)                                       [string]
+
 ```
 
 #### Export All Public Keys and Chain Codes
@@ -95,7 +96,7 @@ Export all public keys and chain codes
 Options:
       --help          Show help                                                                                [boolean]
       --version       Show version number                                                                      [boolean]
-      --provider-url  Web3 provider's URL                                    [string] [default: "http://localhost:8545"]
+      --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
   -p, --path          Derivation path template. The path template should specify the address index (the "N" component)
                       and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
                                                                                     [string] [default: "m/44'/60'/M'/N"]
@@ -114,7 +115,7 @@ Scan all addresses via the provided public keys and chain codes file
 Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
-      --provider-url          Web3 provider's URL                            [string] [default: "http://localhost:8545"]
+      --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
       --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
       --address-start         Starting address index                                               [number] [default: 0]
   -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]

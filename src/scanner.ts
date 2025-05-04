@@ -22,7 +22,7 @@ export const DEFAULT_PATH_PREFIX = `m/44'/60'/${PATH_INDEX}'/${ADDRESS_INDEX}`;
 export const DEFAULT_START = 0;
 
 interface ScannerOptions {
-  providerUrl: string;
+  rpc: string;
 }
 
 type Address = string;
@@ -89,8 +89,8 @@ export class Scanner {
   private static readonly BALANCES_BATCH = 100;
   private static readonly CSV_ADDRESSES_REPORT = "addresses.csv";
 
-  constructor({ providerUrl }: ScannerOptions) {
-    this.provider = new JsonRpcProvider(providerUrl);
+  constructor({ rpc }: ScannerOptions) {
+    this.provider = new JsonRpcProvider(rpc);
 
     this.balance = new Balance(this.provider);
   }

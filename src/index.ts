@@ -26,16 +26,16 @@ const main = async () => {
       .help()
       .version(VERSION)
       .options({
-        "provider-url": {
-          description: "Web3 provider's URL",
+        rpc: {
+          description: "Ethereum RPC URL",
           type: "string",
           default: "http://localhost:8545"
         }
       })
-      .middleware(({ providerUrl }) => {
+      .middleware(({ rpc }) => {
         Logger.info();
 
-        scanner = new Scanner({ providerUrl });
+        scanner = new Scanner({ rpc });
       })
       .command(
         "scan",
