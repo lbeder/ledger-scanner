@@ -68,11 +68,29 @@ const main = async () => {
             type: "number",
             default: DEFAULT_START
           },
-          "hide-empty-addresses": {
-            description: "Hide empty addresses",
+          "hide-small-addresses": {
+            description:
+              // eslint-disable-next-line max-len
+              "Hide addresses with balance less than or equal to the specified amount (in ETH). If no amount is specified, hides empty addresses. Using -h without parameters is equivalent to -h true.",
             alias: "h",
-            type: "boolean",
-            default: false
+            type: "string",
+            default: "false",
+            coerce: (arg) => {
+              if (arg === undefined) {
+                return true;
+              }
+
+              if (arg === "false" || arg === "0") {
+                return false;
+              }
+
+              const num = parseFloat(arg);
+              if (!isNaN(num)) {
+                return num;
+              }
+
+              return arg;
+            }
           },
           "skip-balance": {
             description: "Skip ETH balance check",
@@ -86,14 +104,14 @@ const main = async () => {
             alias: "r"
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, hideEmptyAddresses, skipBalance, csv }) => {
+        async ({ path, addressStart, addressCount, pathCount, pathStart, hideSmallAddresses, skipBalance, csv }) => {
           await scanner.scan({
             path,
             addressCount,
             addressStart,
             pathCount,
             pathStart,
-            hideEmptyAddresses,
+            hideSmallAddresses,
             skipBalance,
             csvOutputDir: csv
           });
@@ -149,7 +167,7 @@ const main = async () => {
             type: "number",
             default: DEFAULT_START
           },
-          "hide-empty-addresses": {
+          "hide-small-addresses": {
             description: "Hide empty addresses",
             alias: "h",
             type: "boolean",
@@ -173,11 +191,11 @@ const main = async () => {
             alias: "r"
           }
         },
-        async ({ addressStart, addressCount, hideEmptyAddresses, skipBalance, input, csv }) => {
+        async ({ addressStart, addressCount, hideSmallAddresses, skipBalance, input, csv }) => {
           await scanner.scanPubkeys({
             addressCount,
             addressStart,
-            hideEmptyAddresses,
+            hideSmallAddresses,
             skipBalance,
             inputPath: input,
             csvOutputDir: csv

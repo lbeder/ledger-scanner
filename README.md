@@ -78,7 +78,9 @@ Options:
       --address-start         Starting address index                                               [number] [default: 0]
       --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
       --path-start            Starting path index                                                  [number] [default: 0]
-  -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
+  -h, --hide-small-addresses  Hide addresses with balance less than or equal to the specified amount (in ETH). If no
+                              amount is specified, hides empty addresses. Using -h without parameters is equivalent to
+                              -h true.                                                       [string] [default: "false"]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -r, --csv                   The CSV reports output directory (optional)                                       [string]
 ```

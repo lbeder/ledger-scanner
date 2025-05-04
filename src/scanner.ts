@@ -43,7 +43,7 @@ interface ScanOptions {
   addressStart: number;
   pathCount: number;
   pathStart: number;
-  hideEmptyAddresses: boolean;
+  hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   csvOutputDir?: string;
 }
@@ -58,7 +58,7 @@ interface ExportPubKeysOptions {
 interface ScanPubkeysOptions {
   addressCount: number;
   addressStart: number;
-  hideEmptyAddresses: boolean;
+  hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   inputPath: string;
   csvOutputDir?: string;
@@ -77,7 +77,7 @@ interface InternalScanOptions {
   pubkeyData?: PubkeyData[];
   addressCount: number;
   addressStart: number;
-  hideEmptyAddresses: boolean;
+  hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   csvOutputDir?: string;
 }
@@ -101,7 +101,7 @@ export class Scanner {
     addressCount,
     pathCount,
     pathStart,
-    hideEmptyAddresses,
+    hideSmallAddresses,
     skipBalance,
     csvOutputDir
   }: ScanOptions) {
@@ -138,7 +138,7 @@ export class Scanner {
       paths[path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString())] = {};
     }
 
-    return this.internalScan({ paths, addressStart, addressCount, hideEmptyAddresses, skipBalance, csvOutputDir });
+    return this.internalScan({ paths, addressStart, addressCount, hideSmallAddresses, skipBalance, csvOutputDir });
   }
 
   public async exportPubkeys({ path, pathCount, pathStart, outputPath }: ExportPubKeysOptions) {
@@ -208,7 +208,7 @@ export class Scanner {
   public async scanPubkeys({
     addressStart,
     addressCount,
-    hideEmptyAddresses,
+    hideSmallAddresses,
     skipBalance,
     inputPath,
     csvOutputDir
@@ -246,14 +246,14 @@ export class Scanner {
       paths[path] = { publicKey, chainCode };
     }
 
-    this.internalScan({ paths, addressStart, addressCount, hideEmptyAddresses, skipBalance, csvOutputDir });
+    this.internalScan({ paths, addressStart, addressCount, hideSmallAddresses, skipBalance, csvOutputDir });
   }
 
   private async internalScan({
     paths,
     addressStart,
     addressCount,
-    hideEmptyAddresses,
+    hideSmallAddresses,
     skipBalance,
     csvOutputDir
   }: InternalScanOptions) {
@@ -319,7 +319,8 @@ export class Scanner {
         const promise = this.balance.getBalance(address).then((ethBalance) => {
           progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
 
-          if (ethBalance.isZero() && hideEmptyAddresses) {
+          const threshold = typeof hideSmallAddresses === "number" ? hideSmallAddresses : 0;
+          if (ethBalance.lte(threshold) && hideSmallAddresses) {
             return;
           }
 
