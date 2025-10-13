@@ -577,7 +577,7 @@ export class Scanner {
 
       if (showBalance) {
         for (const symbol of tokens) {
-          const amount = addressAmounts[symbol] ?? new Decimal(0);
+          const amount = addressAmounts?.[symbol] ?? new Decimal(0);
 
           balances.push(amount.toCSVAmount());
         }
