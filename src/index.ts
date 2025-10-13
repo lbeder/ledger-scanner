@@ -154,6 +154,54 @@ const main = async () => {
         }
       )
       .command(
+        "export-addresses",
+        "Export all addresses",
+        {
+          path: {
+            // eslint-disable-next-line max-len
+            description: `Derivation path template. The path template should specify the address index (the "${ADDRESS_INDEX}" component) and the path index (the "${PATH_INDEX}" component). For example ${DEFAULT_PATH_PREFIX} for standard paths`,
+            type: "string",
+            alias: "p",
+            default: DEFAULT_PATH_PREFIX
+          },
+          "address-count": {
+            description: `Number of addresses to derive and check (the "${ADDRESS_INDEX}" component)`,
+            type: "number",
+            default: DEFAULT_ADDRESS_COUNT
+          },
+          "address-start": {
+            description: "Starting address index",
+            type: "number",
+            default: DEFAULT_START
+          },
+          "path-count": {
+            description: `Number of paths to derive and check (the "${PATH_INDEX}" component)`,
+            type: "number",
+            default: DEFAULT_PATH_COUNT
+          },
+          "path-start": {
+            description: "Starting path index",
+            type: "number",
+            default: DEFAULT_START
+          },
+          output: {
+            description: "The CSV output path (optional)",
+            type: "string",
+            alias: "o"
+          }
+        },
+        async ({ path, addressStart, addressCount, pathCount, pathStart, output }) => {
+          await scanner.exportAddresses({
+            path,
+            addressCount,
+            addressStart,
+            pathCount,
+            pathStart,
+            outputPath: output
+          });
+        }
+      )
+      .command(
         "scan-pubkeys",
         "Scan all addresses via the provided public keys and chain codes file",
         {

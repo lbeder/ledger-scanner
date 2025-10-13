@@ -55,6 +55,15 @@ interface ExportPubKeysOptions {
   outputPath?: string;
 }
 
+interface ExportAddressesOptions {
+  path: string;
+  pathCount: number;
+  pathStart: number;
+  addressCount: number;
+  addressStart: number;
+  outputPath?: string;
+}
+
 interface ScanPubkeysOptions {
   addressCount: number;
   addressStart: number;
@@ -202,6 +211,99 @@ export class Scanner {
 
     if (outputPath) {
       Scanner.exportPublicKeys(outputPath, data);
+    }
+  }
+
+  public async exportAddresses({
+    path,
+    pathCount,
+    pathStart,
+    addressCount,
+    addressStart,
+    outputPath
+  }: ExportAddressesOptions) {
+    if (pathCount === 0) {
+      throw new Error("Invalid path count");
+    }
+
+    if (addressCount === 0) {
+      throw new Error("Invalid address count");
+    }
+
+    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
+      throw new Error("Missing address index component");
+    }
+
+    if (!Scanner.verifyPath(path, PATH_INDEX)) {
+      throw new Error("Missing path index component");
+    }
+
+    Logger.info(`Exporting all addresses starting from path ${path}...`);
+    Logger.info();
+
+    const addressIndexes =
+      addressCount === 1 ? `${addressStart}` : `${addressStart}...${addressStart + addressCount - 1}`;
+    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+
+    Logger.notice(`  Address Indexes: ${addressIndexes} (total of ${addressCount})`);
+    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
+    Logger.info();
+
+    const transport = await TransportNodeHid.create();
+    const appETH = new AppETH(transport);
+
+    const multiBar = new CliProgress.MultiBar(
+      {
+        format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
+        autopadding: true
+      },
+      CliProgress.Presets.shades_classic
+    );
+
+    const progressBar = multiBar.create(pathCount * addressCount, 0);
+
+    const ledgerAddresses: LedgerAddresses = {};
+
+    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
+      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
+
+      const { publicKey, chainCode } = await appETH.getAddress(
+        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+        false,
+        true
+      );
+      if (!chainCode) {
+        throw new Error("Invalid chain code");
+      }
+
+      const hdk = new HDKey();
+      hdk.publicKey = Buffer.from(publicKey, "hex");
+      hdk.chainCode = Buffer.from(chainCode, "hex");
+
+      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
+        const address = Scanner.derive(hdk, addressIndex);
+        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
+
+        ledgerAddresses[address] = {
+          index: addressIndex + 1,
+          address,
+          path: addressDerivationPath
+        };
+
+        progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+      }
+    }
+
+    progressBar.update(pathCount * addressCount, { label: "Finished" });
+
+    multiBar.stop();
+
+    Logger.info();
+
+    Scanner.showAddresses(ledgerAddresses, {}, false);
+
+    if (outputPath) {
+      Scanner.exportAddresses(outputPath, ledgerAddresses);
     }
   }
 
