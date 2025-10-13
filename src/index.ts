@@ -250,6 +250,43 @@ const main = async () => {
           });
         }
       )
+      .command(
+        "scan-addresses",
+        "Scan all addresses from the provided addresses CSV file",
+        {
+          "hide-small-addresses": {
+            description: "Hide empty addresses",
+            alias: "h",
+            type: "boolean",
+            default: false
+          },
+          "skip-balance": {
+            description: "Skip ETH balance check",
+            alias: "s",
+            type: "boolean",
+            default: false
+          },
+          input: {
+            description: "The CSV input path",
+            type: "string",
+            alias: "i",
+            required: true
+          },
+          csv: {
+            description: "The CSV reports output directory (optional)",
+            type: "string",
+            alias: "r"
+          }
+        },
+        async ({ hideSmallAddresses, skipBalance, input, csv }) => {
+          await scanner.scanAddresses({
+            hideSmallAddresses,
+            skipBalance,
+            inputPath: input,
+            csvOutputDir: csv
+          });
+        }
+      )
       .parse();
 
     process.exit(0);

@@ -73,6 +73,13 @@ interface ScanPubkeysOptions {
   csvOutputDir?: string;
 }
 
+interface ScanAddressesOptions {
+  hideSmallAddresses: boolean | number;
+  skipBalance: boolean;
+  inputPath: string;
+  csvOutputDir?: string;
+}
+
 type PubkeyData = {
   publicKey: string;
   chainCode: string;
@@ -349,6 +356,94 @@ export class Scanner {
     }
 
     this.internalScan({ paths, addressStart, addressCount, hideSmallAddresses, skipBalance, csvOutputDir });
+  }
+
+  public async scanAddresses({ hideSmallAddresses, skipBalance, inputPath, csvOutputDir }: ScanAddressesOptions) {
+    Logger.info(`Scanning all addresses from addresses file ${inputPath}...`);
+    Logger.info();
+
+    const fileStream = fs.createReadStream(inputPath);
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    });
+
+    let isFirstLine = true;
+
+    const ledgerAddresses: LedgerAddresses = {};
+
+    for await (const line of rl) {
+      if (isFirstLine) {
+        isFirstLine = false;
+        continue;
+      }
+
+      const [index, address, path] = line.split(",");
+
+      if (!address || !path) {
+        continue;
+      }
+
+      ledgerAddresses[address] = {
+        index: parseInt(index, 10),
+        address,
+        path
+      };
+    }
+
+    // Now scan the addresses for balances
+    const amounts: AddressAmounts = {};
+
+    if (!skipBalance) {
+      const multiBar = new CliProgress.MultiBar(
+        {
+          format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
+          autopadding: true
+        },
+        CliProgress.Presets.shades_classic
+      );
+
+      const addressCount = Object.keys(ledgerAddresses).length;
+      const progressBar = multiBar.create(addressCount, 0);
+
+      const balancePromises: Promise<void>[] = [];
+
+      for (const [address, ledgerAddress] of Object.entries(ledgerAddresses)) {
+        const promise = this.balance.getBalance(address).then((ethBalance) => {
+          progressBar.increment(1, { label: `${ledgerAddress.path} | ${address}` });
+
+          const threshold = typeof hideSmallAddresses === "number" ? hideSmallAddresses : 0;
+          if (ethBalance.lte(threshold) && hideSmallAddresses) {
+            return;
+          }
+
+          set(amounts, [address, ETH], ethBalance);
+        });
+
+        balancePromises.push(promise);
+
+        if (balancePromises.length >= Scanner.BALANCES_BATCH) {
+          await Promise.all(balancePromises);
+          balancePromises.length = 0;
+        }
+      }
+
+      // Await any remaining promises
+      if (balancePromises.length > 0) {
+        await Promise.all(balancePromises);
+      }
+
+      progressBar.update(addressCount, { label: "Finished" });
+      multiBar.stop();
+    }
+
+    Logger.info();
+
+    Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
+
+    if (csvOutputDir) {
+      Scanner.exportAddresses(csvOutputDir, ledgerAddresses);
+    }
   }
 
   private async internalScan({
