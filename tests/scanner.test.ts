@@ -177,6 +177,40 @@ describe("Scanner", () => {
         });
       }).not.toThrow();
     });
+
+    it(`should not throw error when mCount === 0 but path doesn't contain ${M_INDEX}`, () => {
+      expect(() => {
+        scanner.scan({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 0,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: false,
+          csvOutputPath: undefined
+        });
+      }).not.toThrow();
+    });
+
+    it(`should not throw error when nCount === 0 but path doesn't contain ${N_INDEX}`, () => {
+      expect(() => {
+        scanner.scan({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 0,
+          nStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: false,
+          csvOutputPath: undefined
+        });
+      }).not.toThrow();
+    });
   });
 
   describe("exportAddresses", () => {
@@ -411,6 +445,32 @@ describe("Scanner", () => {
           outputPath: undefined
         })
       ).rejects.toThrow(`Missing ${O_INDEX} index component`);
+    });
+
+    it(`should not throw error when mCount === 0 but path doesn't contain ${M_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 0,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should not throw error when nCount === 0 but path doesn't contain ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 0,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
     });
   });
 

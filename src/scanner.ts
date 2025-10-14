@@ -193,10 +193,6 @@ export class Scanner {
       throw new Error(`Invalid ${O_INDEX} count`);
     }
 
-    if (this.mCount === 0) {
-      throw new Error(`Invalid ${M_INDEX} count`);
-    }
-
     if (!this.verifyPath(this.path, O_INDEX)) {
       throw new Error(`Missing ${O_INDEX} index component`);
     }
