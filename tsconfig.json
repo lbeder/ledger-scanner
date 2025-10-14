@@ -26,7 +26,8 @@
     "baseUrl": ".",
     "paths": {
       "*": ["src/*", "node_modules/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["dist", "node_modules"]
