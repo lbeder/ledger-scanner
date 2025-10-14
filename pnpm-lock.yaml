@@ -48,6 +48,9 @@ importers:
       '@types/cli-table':
         specifier: ^0.3.4
         version: 0.3.4
+      '@types/decimal.js':
+        specifier: ^7.4.3
+        version: 7.4.3
       '@types/hdkey':
         specifier: ^2.1.0
         version: 2.1.0
@@ -108,6 +111,10 @@ importers:
       typescript-eslint:
         specifier: ^8.46.1
         version: 8.46.1(eslint@9.37.0)(typescript@5.9.3)
+    optionalDependencies:
+      node-hid:
+        specifier: ^2.1.2
+        version: 2.1.2
 
 packages:
 
@@ -649,6 +656,10 @@ packages:
 
   '@types/cli-table@0.3.4':
     resolution: {integrity: sha512-GsALrTL69mlwbAw/MHF1IPTadSLZQnsxe7a80G8l4inN/iEXCOcVeT/S7aRc6hbhqzL9qZ314kHPDQnQ3ev+HA==}
+
+  '@types/decimal.js@7.4.3':
+    resolution: {integrity: sha512-7MpxcJPHqQ637FCZwJLtJMaDZkcD/iyUxj0m8A+m06slFeqRiK9QtgEyuocWNRbEtCrOZOEbZPTSSR88hMZVsg==}
+    deprecated: This is a stub types definition. decimal.js provides its own type definitions, so you do not need this installed.
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
@@ -3723,6 +3734,10 @@ snapshots:
       '@types/node': 24.7.2
 
   '@types/cli-table@0.3.4': {}
+
+  '@types/decimal.js@7.4.3':
+    dependencies:
+      decimal.js: 10.6.0
 
   '@types/estree@1.0.8': {}
 

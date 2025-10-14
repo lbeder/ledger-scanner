@@ -12,6 +12,29 @@ Ledger Scanner is a privacy-focused tool designed for enumerating Ledger wallet 
 
 ## Installation
 
+### Prerequisites
+
+#### Linux (Ubuntu/Debian/Mint)
+
+Before installing on Linux systems, you need to install build dependencies:
+
+```sh
+sudo apt-get update
+sudo apt-get install build-essential libudev-dev
+```
+
+#### Linux (CentOS/RHEL/Fedora)
+
+```sh
+# For CentOS/RHEL
+sudo yum groupinstall "Development Tools"
+sudo yum install libudev-devel
+
+# For Fedora
+sudo dnf groupinstall "Development Tools"
+sudo dnf install libudev-devel
+```
+
 ### Locally
 
 ```sh
@@ -26,6 +49,19 @@ yarn
 
 # Or
 npm install
+```
+
+**Note for Linux users:** If you encounter native binding errors, try:
+
+```sh
+# Rebuild native modules
+pnpm rebuild-native
+
+# Or force reinstall
+pnpm install --force
+
+# Alternative with npm
+npm install --force
 ```
 
 ### Globally
