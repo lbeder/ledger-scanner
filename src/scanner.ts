@@ -172,27 +172,10 @@ export class Scanner {
     Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${oCount})`);
     Logger.info();
 
+    const pathStrings = Scanner.generatePaths(path, hasMIndex, hasNIndex, mStart, mCount, nStart, nCount);
     const paths: PathData = {};
-
-    if (hasMIndex && hasNIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-          const nPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-          paths[nPath] = {};
-        }
-      }
-    } else if (hasMIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        paths[path.replace(new RegExp(M_INDEX, "g"), mIndex.toString())] = {};
-      }
-    } else if (hasNIndex) {
-      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-        paths[path.replace(new RegExp(N_INDEX, "g"), nIndex.toString())] = {};
-      }
-    } else {
-      // Neither M_INDEX nor N_INDEX present, use the path as-is
-      paths[path] = {};
+    for (const pathString of pathStrings) {
+      paths[pathString] = {};
     }
 
     return this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputDir });
@@ -241,70 +224,16 @@ export class Scanner {
     const totalPaths = hasMIndex && hasNIndex ? mCount * nCount : hasMIndex ? mCount : hasNIndex ? nCount : 1;
     const progressBar = multiBar.create(totalPaths, 0);
 
-    const data: Record<string, PubkeyData> = {};
-
-    if (hasMIndex && hasNIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-          const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-
-          const { publicKey, chainCode } = await appETH.getAddress(
-            derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-            false,
-            true
-          );
-          if (!chainCode) {
-            throw new Error("Invalid chain code");
-          }
-
-          data[derivationPath] = { publicKey, chainCode };
-        }
-      }
-    } else if (hasMIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-
-        const { publicKey, chainCode } = await appETH.getAddress(
-          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-          false,
-          true
-        );
-        if (!chainCode) {
-          throw new Error("Invalid chain code");
-        }
-
-        data[derivationPath] = { publicKey, chainCode };
-      }
-    } else if (hasNIndex) {
-      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-
-        const { publicKey, chainCode } = await appETH.getAddress(
-          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-          false,
-          true
-        );
-        if (!chainCode) {
-          throw new Error("Invalid chain code");
-        }
-
-        data[derivationPath] = { publicKey, chainCode };
-      }
-    } else {
-      const derivationPath = path;
-
-      const { publicKey, chainCode } = await appETH.getAddress(
-        derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-        false,
-        true
-      );
-      if (!chainCode) {
-        throw new Error("Invalid chain code");
-      }
-
-      data[derivationPath] = { publicKey, chainCode };
-    }
+    const data = await Scanner.generateDerivationPaths(
+      appETH,
+      path,
+      hasMIndex,
+      hasNIndex,
+      mStart,
+      mCount,
+      nStart,
+      nCount
+    );
 
     progressBar.update(totalPaths, { label: "Finished" });
 
@@ -384,130 +313,19 @@ export class Scanner {
             : oCount;
     const progressBar = multiBar.create(totalPaths, 0);
 
-    const ledgerAddresses: LedgerAddresses = {};
-
-    if (hasMIndex && hasNIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-          const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-
-          const { publicKey, chainCode } = await appETH.getAddress(
-            derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-            false,
-            true
-          );
-          if (!chainCode) {
-            throw new Error("Invalid chain code");
-          }
-
-          const hdk = new HDKey();
-          hdk.publicKey = Buffer.from(publicKey, "hex");
-          hdk.chainCode = Buffer.from(chainCode, "hex");
-
-          for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-            const address = Scanner.derive(hdk, addressIndex);
-            const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
-
-            ledgerAddresses[address] = {
-              index: addressIndex + 1,
-              address,
-              path: addressDerivationPath
-            };
-
-            progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
-          }
-        }
-      }
-    } else if (hasMIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-
-        const { publicKey, chainCode } = await appETH.getAddress(
-          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-          false,
-          true
-        );
-        if (!chainCode) {
-          throw new Error("Invalid chain code");
-        }
-
-        const hdk = new HDKey();
-        hdk.publicKey = Buffer.from(publicKey, "hex");
-        hdk.chainCode = Buffer.from(chainCode, "hex");
-
-        for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-          const address = Scanner.derive(hdk, addressIndex);
-          const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
-
-          ledgerAddresses[address] = {
-            index: addressIndex + 1,
-            address,
-            path: addressDerivationPath
-          };
-
-          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
-        }
-      }
-    } else if (hasNIndex) {
-      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-
-        const { publicKey, chainCode } = await appETH.getAddress(
-          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-          false,
-          true
-        );
-        if (!chainCode) {
-          throw new Error("Invalid chain code");
-        }
-
-        const hdk = new HDKey();
-        hdk.publicKey = Buffer.from(publicKey, "hex");
-        hdk.chainCode = Buffer.from(chainCode, "hex");
-
-        for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-          const address = Scanner.derive(hdk, addressIndex);
-          const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
-
-          ledgerAddresses[address] = {
-            index: addressIndex + 1,
-            address,
-            path: addressDerivationPath
-          };
-
-          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
-        }
-      }
-    } else {
-      const derivationPath = path;
-
-      const { publicKey, chainCode } = await appETH.getAddress(
-        derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
-        false,
-        true
-      );
-      if (!chainCode) {
-        throw new Error("Invalid chain code");
-      }
-
-      const hdk = new HDKey();
-      hdk.publicKey = Buffer.from(publicKey, "hex");
-      hdk.chainCode = Buffer.from(chainCode, "hex");
-
-      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-        const address = Scanner.derive(hdk, addressIndex);
-        const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
-
-        ledgerAddresses[address] = {
-          index: addressIndex + 1,
-          address,
-          path: addressDerivationPath
-        };
-
-        progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
-      }
-    }
+    const ledgerAddresses = await Scanner.deriveAddressesFromPaths(
+      appETH,
+      path,
+      hasMIndex,
+      hasNIndex,
+      mStart,
+      mCount,
+      nStart,
+      nCount,
+      oStart,
+      oCount,
+      progressBar
+    );
 
     progressBar.update(totalPaths, { label: "Finished" });
 
@@ -646,15 +464,7 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
-      // Transfer balance data from amounts to ledgerAddresses for CSV export
-      if (!skipBalance) {
-        for (const [address, addressAmounts] of Object.entries(amounts)) {
-          if (ledgerAddresses[address] && addressAmounts[ETH]) {
-            ledgerAddresses[address].balance = addressAmounts[ETH];
-          }
-        }
-      }
-      Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
+      Scanner.exportAddressesToCSV(csvOutputDir, ledgerAddresses, amounts, skipBalance);
     }
   }
 
@@ -775,15 +585,7 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
-      // Transfer balance data from amounts to ledgerAddresses for CSV export
-      if (!skipBalance) {
-        for (const [address, addressAmounts] of Object.entries(amounts)) {
-          if (ledgerAddresses[address] && addressAmounts[ETH]) {
-            ledgerAddresses[address].balance = addressAmounts[ETH];
-          }
-        }
-      }
-      Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
+      Scanner.exportAddressesToCSV(csvOutputDir, ledgerAddresses, amounts, skipBalance);
     }
   }
 
@@ -894,6 +696,175 @@ export class Scanner {
     const regex = new RegExp(`/${component}[/']?|/${component}['"]?$`);
 
     return regex.test(path);
+  }
+
+  private static async getAddressData(
+    appETH: AppETH,
+    derivationPath: string
+  ): Promise<{ publicKey: string; chainCode: string }> {
+    const { publicKey, chainCode } = await appETH.getAddress(
+      derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+      false,
+      true
+    );
+
+    if (!chainCode) {
+      throw new Error("Invalid chain code");
+    }
+
+    return { publicKey, chainCode };
+  }
+
+  private static createHDKey(publicKey: string, chainCode: string): HDKey {
+    const hdk = new HDKey();
+    hdk.publicKey = Buffer.from(publicKey, "hex");
+    hdk.chainCode = Buffer.from(chainCode, "hex");
+    return hdk;
+  }
+
+  private static transferBalancesToAddresses(
+    ledgerAddresses: LedgerAddresses,
+    amounts: AddressAmounts,
+    skipBalance: boolean
+  ): void {
+    if (!skipBalance) {
+      for (const [address, addressAmounts] of Object.entries(amounts)) {
+        if (ledgerAddresses[address] && addressAmounts[ETH]) {
+          ledgerAddresses[address].balance = addressAmounts[ETH];
+        }
+      }
+    }
+  }
+
+  private static exportAddressesToCSV(
+    csvOutputDir: string,
+    ledgerAddresses: LedgerAddresses,
+    amounts: AddressAmounts,
+    skipBalance: boolean
+  ): void {
+    Scanner.transferBalancesToAddresses(ledgerAddresses, amounts, skipBalance);
+    Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
+  }
+
+  private static generatePaths(
+    path: string,
+    hasMIndex: boolean,
+    hasNIndex: boolean,
+    mStart: number,
+    mCount: number,
+    nStart: number,
+    nCount: number
+  ): string[] {
+    const paths: string[] = [];
+
+    if (hasMIndex && hasNIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+          const nPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+          paths.push(nPath);
+        }
+      }
+    } else if (hasMIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        paths.push(path.replace(new RegExp(M_INDEX, "g"), mIndex.toString()));
+      }
+    } else if (hasNIndex) {
+      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+        paths.push(path.replace(new RegExp(N_INDEX, "g"), nIndex.toString()));
+      }
+    } else {
+      paths.push(path);
+    }
+
+    return paths;
+  }
+
+  private static async generateDerivationPaths(
+    appETH: AppETH,
+    path: string,
+    hasMIndex: boolean,
+    hasNIndex: boolean,
+    mStart: number,
+    mCount: number,
+    nStart: number,
+    nCount: number
+  ): Promise<Record<string, { publicKey: string; chainCode: string }>> {
+    const data: Record<string, { publicKey: string; chainCode: string }> = {};
+
+    if (hasMIndex && hasNIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+          const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+          const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+          data[derivationPath] = { publicKey, chainCode };
+        }
+      }
+    } else if (hasMIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+        const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+        data[derivationPath] = { publicKey, chainCode };
+      }
+    } else if (hasNIndex) {
+      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+        const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+        data[derivationPath] = { publicKey, chainCode };
+      }
+    } else {
+      const { publicKey, chainCode } = await Scanner.getAddressData(appETH, path);
+      data[path] = { publicKey, chainCode };
+    }
+
+    return data;
+  }
+
+  private static async deriveAddressesFromPaths(
+    appETH: AppETH,
+    path: string,
+    hasMIndex: boolean,
+    hasNIndex: boolean,
+    mStart: number,
+    mCount: number,
+    nStart: number,
+    nCount: number,
+    oStart: number,
+    oCount: number,
+    progressBar: CliProgress.SingleBar
+  ): Promise<LedgerAddresses> {
+    const ledgerAddresses: LedgerAddresses = {};
+
+    const derivationData = await Scanner.generateDerivationPaths(
+      appETH,
+      path,
+      hasMIndex,
+      hasNIndex,
+      mStart,
+      mCount,
+      nStart,
+      nCount
+    );
+
+    for (const [derivationPath, { publicKey, chainCode }] of Object.entries(derivationData)) {
+      const hdk = Scanner.createHDKey(publicKey, chainCode);
+
+      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
+        const address = Scanner.derive(hdk, addressIndex);
+        const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
+
+        ledgerAddresses[address] = {
+          index: addressIndex + 1,
+          address,
+          path: addressDerivationPath
+        };
+
+        progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+      }
+    }
+
+    return ledgerAddresses;
   }
 
   private static derive(hdk: HDKey, index: number) {

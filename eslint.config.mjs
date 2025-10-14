@@ -44,7 +44,9 @@ export default [
           varsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_"
         }
-      ]
+      ],
+      "@typescript-eslint/no-unused-expressions": "warn",
+      "no-unused-vars": "off"
     },
     languageOptions: {
       globals: {

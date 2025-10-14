@@ -540,4 +540,186 @@ describe("Scanner", () => {
       expect(Logger.table).toHaveBeenCalled();
     });
   });
+
+  describe("path combinations", () => {
+    it(`should handle path with both ${M_INDEX} and ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportAddresses({
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle path with only ${M_INDEX}`, async () => {
+      await expect(
+        scanner.exportAddresses({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle path with only ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportAddresses({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle path with neither ${M_INDEX} nor ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportAddresses({
+          path: `m/44'/60'/0'/0'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle scan with both ${M_INDEX} and ${N_INDEX}`, async () => {
+      await expect(
+        scanner.scan({
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: true,
+          csvOutputDir: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle scan with only ${M_INDEX}`, async () => {
+      await expect(
+        scanner.scan({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: true,
+          csvOutputDir: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle scan with only ${N_INDEX}`, async () => {
+      await expect(
+        scanner.scan({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: true,
+          csvOutputDir: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle scan with neither ${M_INDEX} nor ${N_INDEX}`, async () => {
+      await expect(
+        scanner.scan({
+          path: `m/44'/60'/0'/0'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          oCount: 1,
+          oStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: true,
+          csvOutputDir: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle exportPubkeys with both ${M_INDEX} and ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle exportPubkeys with only ${M_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          mCount: 2,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle exportPubkeys with only ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 2,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+
+    it(`should handle exportPubkeys with neither ${M_INDEX} nor ${N_INDEX}`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/0'/0'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).resolves.not.toThrow();
+    });
+  });
 });
