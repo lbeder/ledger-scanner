@@ -2,12 +2,16 @@
 import yargs from "yargs";
 import "./utils/csv";
 import {
-  ADDRESS_INDEX,
-  DEFAULT_ADDRESS_COUNT,
-  DEFAULT_PATH_COUNT,
+  DEFAULT_M_COUNT,
+  DEFAULT_M_START,
+  DEFAULT_N_COUNT,
+  DEFAULT_N_START,
+  DEFAULT_O_COUNT,
+  DEFAULT_O_START,
   DEFAULT_PATH_PREFIX,
-  DEFAULT_START,
-  PATH_INDEX,
+  M_INDEX,
+  N_INDEX,
+  O_INDEX,
   Scanner
 } from "./scanner";
 import { Logger } from "./utils/logger";
@@ -43,30 +47,40 @@ const main = async () => {
         {
           path: {
             // eslint-disable-next-line max-len
-            description: `Derivation path template. The path template should specify the address index (the "${ADDRESS_INDEX}" component) and the path index (the "${PATH_INDEX}" component). For example ${DEFAULT_PATH_PREFIX} for standard paths`,
+            description: `Derivation path template. If "${M_INDEX}" or "${N_INDEX}" components are present, the corresponding m- and n- parameters can be specified. Otherwise they are ignored. For example ${DEFAULT_PATH_PREFIX} for standard paths`,
             type: "string",
             alias: "p",
             default: DEFAULT_PATH_PREFIX
           },
-          "address-count": {
-            description: `Number of addresses to derive and check (the "${ADDRESS_INDEX}" component)`,
+          "m-count": {
+            description: `Number of "${M_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_ADDRESS_COUNT
+            default: DEFAULT_M_COUNT
           },
-          "address-start": {
-            description: "Starting address index",
+          "m-start": {
+            description: `Starting "${M_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_M_START
           },
-          "path-count": {
-            description: `Number of paths to derive and check (the "${PATH_INDEX}" component)`,
+          "n-count": {
+            description: `Number of "${N_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_PATH_COUNT
+            default: DEFAULT_N_COUNT
           },
-          "path-start": {
-            description: "Starting path index",
+          "n-start": {
+            description: `Starting "${N_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_N_START
+          },
+          "o-count": {
+            description: `Number of "${O_INDEX}" indexes to derive and check`,
+            type: "number",
+            default: DEFAULT_O_COUNT
+          },
+          "o-start": {
+            description: `Starting "${O_INDEX}" index`,
+            type: "number",
+            default: DEFAULT_O_START
           },
           "hide-small-addresses": {
             description:
@@ -104,13 +118,15 @@ const main = async () => {
             alias: "r"
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, hideSmallAddresses, skipBalance, csv }) => {
+        async ({ path, mCount, mStart, nCount, nStart, oCount, oStart, hideSmallAddresses, skipBalance, csv }) => {
           await scanner.scan({
             path,
-            addressCount,
-            addressStart,
-            pathCount,
-            pathStart,
+            mCount,
+            mStart,
+            nCount,
+            nStart,
+            oCount,
+            oStart,
             hideSmallAddresses,
             skipBalance,
             csvOutputDir: csv
@@ -123,20 +139,30 @@ const main = async () => {
         {
           path: {
             // eslint-disable-next-line max-len
-            description: `Derivation path template. The path template should specify the address index (the "${ADDRESS_INDEX}" component) and the path index (the "${PATH_INDEX}" component). For example ${DEFAULT_PATH_PREFIX} for standard paths`,
+            description: `Derivation path template. If "${M_INDEX}" or "${N_INDEX}" components are present, the corresponding m- and n- parameters can be specified. Otherwise they are ignored. For example ${DEFAULT_PATH_PREFIX} for standard paths`,
             type: "string",
             alias: "p",
             default: DEFAULT_PATH_PREFIX
           },
-          "path-count": {
-            description: `Number of paths to derive and check (the "${PATH_INDEX}" component)`,
+          "m-count": {
+            description: `Number of "${M_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_PATH_COUNT
+            default: DEFAULT_M_COUNT
           },
-          "path-start": {
-            description: "Starting path index",
+          "m-start": {
+            description: `Starting "${M_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_M_START
+          },
+          "n-count": {
+            description: `Number of "${N_INDEX}" indexes to derive and check`,
+            type: "number",
+            default: DEFAULT_N_COUNT
+          },
+          "n-start": {
+            description: `Starting "${N_INDEX}" index`,
+            type: "number",
+            default: DEFAULT_N_START
           },
           output: {
             description: "The CSV output path (optional)",
@@ -144,11 +170,13 @@ const main = async () => {
             alias: "o"
           }
         },
-        async ({ path, pathCount, pathStart, output }) => {
+        async ({ path, mCount, mStart, nCount, nStart, output }) => {
           await scanner.exportPubkeys({
             path,
-            pathCount,
-            pathStart,
+            mCount,
+            mStart,
+            nCount,
+            nStart,
             outputPath: output
           });
         }
@@ -159,30 +187,40 @@ const main = async () => {
         {
           path: {
             // eslint-disable-next-line max-len
-            description: `Derivation path template. The path template should specify the address index (the "${ADDRESS_INDEX}" component) and the path index (the "${PATH_INDEX}" component). For example ${DEFAULT_PATH_PREFIX} for standard paths`,
+            description: `Derivation path template. If "${M_INDEX}" or "${N_INDEX}" components are present, the corresponding m- and n- parameters can be specified. Otherwise they are ignored. For example ${DEFAULT_PATH_PREFIX} for standard paths`,
             type: "string",
             alias: "p",
             default: DEFAULT_PATH_PREFIX
           },
-          "address-count": {
-            description: `Number of addresses to derive and check (the "${ADDRESS_INDEX}" component)`,
+          "m-count": {
+            description: `Number of "${M_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_ADDRESS_COUNT
+            default: DEFAULT_M_COUNT
           },
-          "address-start": {
-            description: "Starting address index",
+          "m-start": {
+            description: `Starting "${M_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_M_START
           },
-          "path-count": {
-            description: `Number of paths to derive and check (the "${PATH_INDEX}" component)`,
+          "n-count": {
+            description: `Number of "${N_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_PATH_COUNT
+            default: DEFAULT_N_COUNT
           },
-          "path-start": {
-            description: "Starting path index",
+          "n-start": {
+            description: `Starting "${N_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_N_START
+          },
+          "o-count": {
+            description: `Number of "${O_INDEX}" indexes to derive and check`,
+            type: "number",
+            default: DEFAULT_O_COUNT
+          },
+          "o-start": {
+            description: `Starting "${O_INDEX}" index`,
+            type: "number",
+            default: DEFAULT_O_START
           },
           output: {
             description: "The CSV output path (optional)",
@@ -190,13 +228,15 @@ const main = async () => {
             alias: "o"
           }
         },
-        async ({ path, addressStart, addressCount, pathCount, pathStart, output }) => {
+        async ({ path, oStart, oCount, mCount, mStart, nCount, nStart, output }) => {
           await scanner.exportAddresses({
             path,
-            addressCount,
-            addressStart,
-            pathCount,
-            pathStart,
+            mCount,
+            mStart,
+            nCount,
+            nStart,
+            oCount,
+            oStart,
             outputPath: output
           });
         }
@@ -205,21 +245,38 @@ const main = async () => {
         "scan-pubkeys",
         "Scan all addresses via the provided public keys and chain codes file",
         {
-          "address-count": {
-            description: `Number of addresses to derive and check (the "${ADDRESS_INDEX}" component)`,
+          "o-count": {
+            description: `Number of "${O_INDEX}" indexes to derive and check`,
             type: "number",
-            default: DEFAULT_ADDRESS_COUNT
+            default: DEFAULT_O_COUNT
           },
-          "address-start": {
-            description: "Starting address index",
+          "o-start": {
+            description: `Starting "${O_INDEX}" index`,
             type: "number",
-            default: DEFAULT_START
+            default: DEFAULT_O_START
           },
           "hide-small-addresses": {
-            description: "Hide empty addresses",
+            description:
+              // eslint-disable-next-line max-len
+              "Hide addresses with balance less than or equal to the specified amount (in ETH). If no amount is specified, hides empty addresses. Using -h without parameters is equivalent to -h true.",
             alias: "h",
-            type: "boolean",
-            default: false
+            type: "string",
+            default: "false",
+            coerce: (arg) => {
+              if (arg === undefined) {
+                return true;
+              }
+
+              if (arg === "false" || arg === "0") {
+                return false;
+              }
+
+              if (arg === "true" || arg === "1") {
+                return true;
+              }
+
+              return parseFloat(arg);
+            }
           },
           "skip-balance": {
             description: "Skip ETH balance check",
@@ -239,10 +296,10 @@ const main = async () => {
             alias: "r"
           }
         },
-        async ({ addressStart, addressCount, hideSmallAddresses, skipBalance, input, csv }) => {
+        async ({ oCount, oStart, hideSmallAddresses, skipBalance, input, csv }) => {
           await scanner.scanPubkeys({
-            addressCount,
-            addressStart,
+            oCount,
+            oStart,
             hideSmallAddresses,
             skipBalance,
             inputPath: input,
@@ -255,10 +312,27 @@ const main = async () => {
         "Scan all addresses from the provided addresses CSV file",
         {
           "hide-small-addresses": {
-            description: "Hide empty addresses",
+            description:
+              // eslint-disable-next-line max-len
+              "Hide addresses with balance less than or equal to the specified amount (in ETH). If no amount is specified, hides empty addresses. Using -h without parameters is equivalent to -h true.",
             alias: "h",
-            type: "boolean",
-            default: false
+            type: "string",
+            default: "false",
+            coerce: (arg) => {
+              if (arg === undefined) {
+                return true;
+              }
+
+              if (arg === "false" || arg === "0") {
+                return false;
+              }
+
+              if (arg === "true" || arg === "1") {
+                return true;
+              }
+
+              return parseFloat(arg);
+            }
           },
           "skip-balance": {
             description: "Skip ETH balance check",

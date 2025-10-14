@@ -1,9 +1,10 @@
 import * as fs from "fs";
 import { Decimal } from "decimal.js";
-import { Scanner } from "../src/scanner";
+import { M_INDEX, N_INDEX, O_INDEX, Scanner } from "../src/scanner";
 
 // Mock all external dependencies
 jest.mock("@ledgerhq/hw-transport-node-hid", () => ({
+  __esModule: true,
   default: {
     create: jest.fn().mockResolvedValue({
       close: jest.fn()
@@ -11,12 +12,24 @@ jest.mock("@ledgerhq/hw-transport-node-hid", () => ({
   }
 }));
 
+// Mock HDKey
+jest.mock("hdkey", () => {
+  return jest.fn().mockImplementation(() => ({
+    publicKey: null,
+    chainCode: null,
+    derive: jest.fn().mockReturnValue({
+      publicKey: Buffer.from("02f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9", "hex")
+    })
+  }));
+});
+
 jest.mock("@ledgerhq/hw-app-eth", () => ({
+  __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     getAddress: jest.fn().mockResolvedValue({
       publicKey:
-        "0x04a1b2c3d4e5f678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789",
-      chainCode: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        "04f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9388f7b0f632d8141b5d52f0808e46464c246a143a0b02d14c35469bb34ce17a9",
+      chainCode: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
     })
   }))
 }));
@@ -63,79 +76,123 @@ describe("Scanner", () => {
   });
 
   describe("scan", () => {
-    it("should throw error for invalid address count", () => {
+    it(`should throw error for invalid ${O_INDEX} count`, () => {
       expect(() => {
         scanner.scan({
-          path: "m/44'/60'/M'/N",
-          addressCount: 0,
-          addressStart: 0,
-          pathCount: 1,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          oCount: 0,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
           csvOutputDir: undefined
         });
-      }).toThrow("Invalid address count");
+      }).toThrow(`Invalid ${O_INDEX} count`);
     });
 
-    it("should throw error for invalid path count", () => {
+    it(`should throw error for invalid ${M_INDEX} count`, () => {
       expect(() => {
         scanner.scan({
-          path: "m/44'/60'/M'/N",
-          addressCount: 1,
-          addressStart: 0,
-          pathCount: 0,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 0,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
           csvOutputDir: undefined
         });
-      }).toThrow("Invalid path count");
+      }).toThrow(`Invalid ${M_INDEX} count`);
     });
 
-    it("should throw error for missing address index component", () => {
+    it(`should throw error for invalid ${N_INDEX} count`, () => {
       expect(() => {
         scanner.scan({
-          path: "m/44'/60'/0'",
-          addressCount: 1,
-          addressStart: 0,
-          pathCount: 1,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 0,
+          nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
           csvOutputDir: undefined
         });
-      }).toThrow("Missing address index component");
+      }).toThrow(`Invalid ${N_INDEX} count`);
     });
 
-    it("should throw error for missing path index component", () => {
+    it(`should throw error for missing ${O_INDEX} index component`, () => {
       expect(() => {
         scanner.scan({
-          path: "m/44'/60'/N",
-          addressCount: 1,
-          addressStart: 0,
-          pathCount: 1,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
           csvOutputDir: undefined
         });
-      }).toThrow("Missing path index component");
+      }).toThrow(`Missing ${O_INDEX} index component`);
+    });
+
+    it(`should not throw error when mCount > 0 but path doesn't contain ${M_INDEX}`, () => {
+      expect(() => {
+        scanner.scan({
+          path: `m/44'/60'/${N_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: false,
+          csvOutputDir: undefined
+        });
+      }).not.toThrow();
+    });
+
+    it(`should not throw error when nCount > 0 but path doesn't contain ${N_INDEX}`, () => {
+      expect(() => {
+        scanner.scan({
+          path: `m/44'/60'/${M_INDEX}'/${O_INDEX}`,
+          oCount: 1,
+          oStart: 0,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          hideSmallAddresses: false,
+          skipBalance: false,
+          csvOutputDir: undefined
+        });
+      }).not.toThrow();
     });
   });
 
   describe("exportAddresses", () => {
-    it("should throw error for invalid address count", async () => {
+    it(`should throw error for invalid ${O_INDEX} count`, async () => {
       await expect(
         scanner.exportAddresses({
-          path: "m/44'/60'/M'/N",
-          pathCount: 1,
-          pathStart: 0,
-          addressCount: 0,
-          addressStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          oCount: 0,
+          oStart: 0,
           outputPath: undefined
         })
-      ).rejects.toThrow("Invalid address count");
+      ).rejects.toThrow(`Invalid ${O_INDEX} count`);
     });
   });
 
@@ -273,26 +330,43 @@ describe("Scanner", () => {
   });
 
   describe("exportPubkeys", () => {
-    it("should throw error for invalid path count", async () => {
+    it(`should throw error for invalid ${M_INDEX} count`, async () => {
       await expect(
         scanner.exportPubkeys({
-          path: "m/44'/60'/M'/N",
-          pathCount: 0,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 0,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
           outputPath: undefined
         })
-      ).rejects.toThrow("Invalid path count");
+      ).rejects.toThrow(`Invalid ${M_INDEX} count`);
     });
 
-    it("should throw error for missing address index component", async () => {
+    it(`should throw error for invalid ${N_INDEX} count`, async () => {
       await expect(
         scanner.exportPubkeys({
-          path: "m/44'/60'/0'",
-          pathCount: 1,
-          pathStart: 0,
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 0,
+          nStart: 0,
           outputPath: undefined
         })
-      ).rejects.toThrow("Missing address index component");
+      ).rejects.toThrow(`Invalid ${N_INDEX} count`);
+    });
+
+    it(`should throw error for missing ${O_INDEX} index component`, async () => {
+      await expect(
+        scanner.exportPubkeys({
+          path: `m/44'/60'/${M_INDEX}'/${N_INDEX}'`,
+          mCount: 1,
+          mStart: 0,
+          nCount: 1,
+          nStart: 0,
+          outputPath: undefined
+        })
+      ).rejects.toThrow(`Missing ${O_INDEX} index component`);
     });
   });
 

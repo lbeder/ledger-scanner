@@ -112,10 +112,10 @@ Options:
   -p, --path                  Derivation path template. The path template should specify the address index (the "N"
                               component) and the path index (the "M" component). For example m/44'/60'/M'/N for standard
                               paths                                                 [string] [default: "m/44'/60'/M'/N"]
-      --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
-      --address-start         Starting address index                                               [number] [default: 0]
-      --path-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
-      --path-start            Starting path index                                                  [number] [default: 0]
+      --o-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
+      --o-start         Starting address index                                               [number] [default: 0]
+      --m-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
+      --m-start            Starting path index                                                  [number] [default: 0]
   -h, --hide-small-addresses  Hide addresses with balance less than or equal to the specified amount (in ETH). If no
                               amount is specified, hides empty addresses. Using -h without parameters is equivalent to
                               -h true.                                                       [string] [default: "false"]
@@ -138,8 +138,8 @@ Options:
   -p, --path          Derivation path template. The path template should specify the address index (the "N" component)
                       and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
                                                                                     [string] [default: "m/44'/60'/M'/N"]
-      --path-count    Number of paths to derive and check (the "M" component)                      [number] [default: 1]
-      --path-start    Starting path index                                                          [number] [default: 0]
+      --m-count    Number of paths to derive and check (the "M" component)                      [number] [default: 1]
+      --m-start    Starting path index                                                          [number] [default: 0]
   -o, --output        The CSV output path (optional)                                                            [string]
 ```
 
@@ -154,8 +154,8 @@ Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
       --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
-      --address-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
-      --address-start         Starting address index                                               [number] [default: 0]
+      --o-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
+      --o-start         Starting address index                                               [number] [default: 0]
   -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -i, --input                 The CSV input path                                                     [string] [required]
@@ -176,10 +176,10 @@ Options:
   -p, --path           Derivation path template. The path template should specify the address index (the "N" component)
                        and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
                                                                                     [string] [default: "m/44'/60'/M'/N"]
-      --address-count  Number of addresses to derive and check (the "N" component)               [number] [default: 500]
-      --address-start  Starting address index                                                      [number] [default: 0]
-      --path-count     Number of paths to derive and check (the "M" component)                     [number] [default: 1]
-      --path-start     Starting path index                                                         [number] [default: 0]
+      --o-count  Number of addresses to derive and check (the "N" component)               [number] [default: 500]
+      --o-start  Starting address index                                                      [number] [default: 0]
+      --m-count     Number of paths to derive and check (the "M" component)                     [number] [default: 1]
+      --m-start     Starting path index                                                         [number] [default: 0]
   -o, --output         The CSV output path (optional)                                                           [string]
 ```
 

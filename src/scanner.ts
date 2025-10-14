@@ -14,12 +14,16 @@ import { Balance } from "./modules";
 import { ETH } from "./utils/constants";
 import { Logger } from "./utils/logger";
 
-export const ADDRESS_INDEX = "N";
-export const PATH_INDEX = "M";
-export const DEFAULT_ADDRESS_COUNT = 500;
-export const DEFAULT_PATH_COUNT = 1;
-export const DEFAULT_PATH_PREFIX = `m/44'/60'/${PATH_INDEX}'/${ADDRESS_INDEX}`;
-export const DEFAULT_START = 0;
+export const M_INDEX = "M";
+export const N_INDEX = "N";
+export const O_INDEX = "O";
+export const DEFAULT_O_COUNT = 500;
+export const DEFAULT_M_COUNT = 1;
+export const DEFAULT_M_START = 0;
+export const DEFAULT_N_COUNT = 1;
+export const DEFAULT_N_START = 0;
+export const DEFAULT_PATH_PREFIX = `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`;
+export const DEFAULT_O_START = 0;
 
 interface ScannerOptions {
   rpc: string;
@@ -39,10 +43,12 @@ type LedgerAddresses = Record<Address, LedgerAddress>;
 
 interface ScanOptions {
   path: string;
-  addressCount: number;
-  addressStart: number;
-  pathCount: number;
-  pathStart: number;
+  mCount: number;
+  mStart: number;
+  nCount: number;
+  nStart: number;
+  oCount: number;
+  oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   csvOutputDir?: string;
@@ -50,23 +56,27 @@ interface ScanOptions {
 
 interface ExportPubKeysOptions {
   path: string;
-  pathCount: number;
-  pathStart: number;
+  mCount: number;
+  mStart: number;
+  nCount: number;
+  nStart: number;
   outputPath?: string;
 }
 
 interface ExportAddressesOptions {
   path: string;
-  pathCount: number;
-  pathStart: number;
-  addressCount: number;
-  addressStart: number;
+  mCount: number;
+  mStart: number;
+  nCount: number;
+  nStart: number;
+  oCount: number;
+  oStart: number;
   outputPath?: string;
 }
 
 interface ScanPubkeysOptions {
-  addressCount: number;
-  addressStart: number;
+  oCount: number;
+  oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   inputPath: string;
@@ -91,8 +101,8 @@ type PathData = Record<string, PubkeyData | {}>;
 interface InternalScanOptions {
   paths: PathData;
   pubkeyData?: PubkeyData[];
-  addressCount: number;
-  addressStart: number;
+  oCount: number;
+  oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   csvOutputDir?: string;
@@ -113,69 +123,107 @@ export class Scanner {
 
   public scan({
     path,
-    addressStart,
-    addressCount,
-    pathCount,
-    pathStart,
+    mCount,
+    mStart,
+    nCount,
+    nStart,
+    oCount,
+    oStart,
     hideSmallAddresses,
     skipBalance,
     csvOutputDir
   }: ScanOptions) {
-    if (addressCount === 0) {
-      throw new Error("Invalid address count");
+    if (oCount === 0) {
+      throw new Error(`Invalid ${O_INDEX} count`);
     }
 
-    if (pathCount === 0) {
-      throw new Error("Invalid path count");
+    if (mCount === 0) {
+      throw new Error(`Invalid ${M_INDEX} count`);
     }
 
-    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
-      throw new Error("Missing address index component");
+    if (!Scanner.verifyPath(path, O_INDEX)) {
+      throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    if (!Scanner.verifyPath(path, PATH_INDEX)) {
-      throw new Error("Missing path index component");
+    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
+    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
+
+    if (hasMIndex && mCount === 0) {
+      throw new Error(`Invalid ${M_INDEX} count`);
+    }
+    if (hasNIndex && nCount === 0) {
+      throw new Error(`Invalid ${N_INDEX} count`);
     }
 
     Logger.info(`Scanning all addresses starting from path ${path}...`);
     Logger.info();
 
-    const addressIndexes =
-      addressCount === 1 ? `${addressStart}` : `${addressStart}...${addressStart + addressCount - 1}`;
-    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+    const oIndexes = oCount === 1 ? `${oStart}` : `${oStart}...${oStart + oCount - 1}`;
+    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
+    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
 
-    Logger.notice(`  Address Indexes: ${addressIndexes} (total of ${addressCount})`);
-    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
+    if (hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    }
+    if (hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    }
+    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${oCount})`);
     Logger.info();
 
     const paths: PathData = {};
 
-    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
-      paths[path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString())] = {};
+    if (hasMIndex && hasNIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+          const nPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+          paths[nPath] = {};
+        }
+      }
+    } else if (hasMIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        paths[path.replace(new RegExp(M_INDEX, "g"), mIndex.toString())] = {};
+      }
+    } else if (hasNIndex) {
+      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+        paths[path.replace(new RegExp(N_INDEX, "g"), nIndex.toString())] = {};
+      }
+    } else {
+      // Neither M_INDEX nor N_INDEX present, use the path as-is
+      paths[path] = {};
     }
 
-    return this.internalScan({ paths, addressStart, addressCount, hideSmallAddresses, skipBalance, csvOutputDir });
+    return this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputDir });
   }
 
-  public async exportPubkeys({ path, pathCount, pathStart, outputPath }: ExportPubKeysOptions) {
-    if (pathCount === 0) {
-      throw new Error("Invalid path count");
+  public async exportPubkeys({ path, mCount, mStart, nCount, nStart, outputPath }: ExportPubKeysOptions) {
+    if (!Scanner.verifyPath(path, O_INDEX)) {
+      throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
-      throw new Error("Missing address index component");
-    }
+    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
+    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
 
-    if (!Scanner.verifyPath(path, PATH_INDEX)) {
-      throw new Error("Missing path index component");
+    if (hasMIndex && mCount === 0) {
+      throw new Error(`Invalid ${M_INDEX} count`);
+    }
+    if (hasNIndex && nCount === 0) {
+      throw new Error(`Invalid ${N_INDEX} count`);
     }
 
     Logger.info(`Exporting all public keys and chain codes starting from path ${path}...`);
     Logger.info();
 
-    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
+    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
 
-    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
+    if (hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    }
+    if (hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    }
     Logger.info();
 
     const transport = await TransportNodeHid.create();
@@ -189,15 +237,64 @@ export class Scanner {
       CliProgress.Presets.shades_classic
     );
 
-    const progressBar = multiBar.create(pathCount, 0);
+    const totalPaths = hasMIndex && hasNIndex ? mCount * nCount : hasMIndex ? mCount : hasNIndex ? nCount : 1;
+    const progressBar = multiBar.create(totalPaths, 0);
 
     const data: Record<string, PubkeyData> = {};
 
-    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
-      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
+    if (hasMIndex && hasNIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+          const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+
+          const { publicKey, chainCode } = await appETH.getAddress(
+            derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+            false,
+            true
+          );
+          if (!chainCode) {
+            throw new Error("Invalid chain code");
+          }
+
+          data[derivationPath] = { publicKey, chainCode };
+        }
+      }
+    } else if (hasMIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+
+        const { publicKey, chainCode } = await appETH.getAddress(
+          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+          false,
+          true
+        );
+        if (!chainCode) {
+          throw new Error("Invalid chain code");
+        }
+
+        data[derivationPath] = { publicKey, chainCode };
+      }
+    } else if (hasNIndex) {
+      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+
+        const { publicKey, chainCode } = await appETH.getAddress(
+          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+          false,
+          true
+        );
+        if (!chainCode) {
+          throw new Error("Invalid chain code");
+        }
+
+        data[derivationPath] = { publicKey, chainCode };
+      }
+    } else {
+      const derivationPath = path;
 
       const { publicKey, chainCode } = await appETH.getAddress(
-        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+        derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
         false,
         true
       );
@@ -208,7 +305,7 @@ export class Scanner {
       data[derivationPath] = { publicKey, chainCode };
     }
 
-    progressBar.update(pathCount, { label: "Finished" });
+    progressBar.update(totalPaths, { label: "Finished" });
 
     multiBar.stop();
 
@@ -223,37 +320,46 @@ export class Scanner {
 
   public async exportAddresses({
     path,
-    pathCount,
-    pathStart,
-    addressCount,
-    addressStart,
+    mCount,
+    mStart,
+    nCount,
+    nStart,
+    oCount,
+    oStart,
     outputPath
   }: ExportAddressesOptions) {
-    if (pathCount === 0) {
-      throw new Error("Invalid path count");
+    if (oCount === 0) {
+      throw new Error(`Invalid ${O_INDEX} count`);
     }
 
-    if (addressCount === 0) {
-      throw new Error("Invalid address count");
+    if (!Scanner.verifyPath(path, O_INDEX)) {
+      throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
-      throw new Error("Missing address index component");
-    }
+    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
+    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
 
-    if (!Scanner.verifyPath(path, PATH_INDEX)) {
-      throw new Error("Missing path index component");
+    if (hasMIndex && mCount === 0) {
+      throw new Error(`Invalid ${M_INDEX} count`);
+    }
+    if (hasNIndex && nCount === 0) {
+      throw new Error(`Invalid ${N_INDEX} count`);
     }
 
     Logger.info(`Exporting all addresses starting from path ${path}...`);
     Logger.info();
 
-    const addressIndexes =
-      addressCount === 1 ? `${addressStart}` : `${addressStart}...${addressStart + addressCount - 1}`;
-    const pathIndexes = pathCount === 1 ? `${pathStart}` : `${pathStart}...${pathStart + pathCount - 1}`;
+    const oIndexes = oCount === 1 ? `${oStart}` : `${oStart}...${oStart + oCount - 1}`;
+    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
+    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
 
-    Logger.notice(`  Address Indexes: ${addressIndexes} (total of ${addressCount})`);
-    Logger.notice(`  Path Indexes: ${pathIndexes} (total of ${pathCount})`);
+    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${oCount})`);
+    if (hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    }
+    if (hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    }
     Logger.info();
 
     const transport = await TransportNodeHid.create();
@@ -267,15 +373,116 @@ export class Scanner {
       CliProgress.Presets.shades_classic
     );
 
-    const progressBar = multiBar.create(pathCount * addressCount, 0);
+    const totalPaths =
+      hasMIndex && hasNIndex
+        ? mCount * nCount * oCount
+        : hasMIndex
+          ? mCount * oCount
+          : hasNIndex
+            ? nCount * oCount
+            : oCount;
+    const progressBar = multiBar.create(totalPaths, 0);
 
     const ledgerAddresses: LedgerAddresses = {};
 
-    for (let pathIndex = pathStart; pathIndex < pathStart + pathCount; ++pathIndex) {
-      const derivationPath = path.replace(new RegExp(PATH_INDEX, "g"), pathIndex.toString());
+    if (hasMIndex && hasNIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+          const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+
+          const { publicKey, chainCode } = await appETH.getAddress(
+            derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+            false,
+            true
+          );
+          if (!chainCode) {
+            throw new Error("Invalid chain code");
+          }
+
+          const hdk = new HDKey();
+          hdk.publicKey = Buffer.from(publicKey, "hex");
+          hdk.chainCode = Buffer.from(chainCode, "hex");
+
+          for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
+            const address = Scanner.derive(hdk, addressIndex);
+            const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
+
+            ledgerAddresses[address] = {
+              index: addressIndex + 1,
+              address,
+              path: addressDerivationPath
+            };
+
+            progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+          }
+        }
+      }
+    } else if (hasMIndex) {
+      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
+        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+
+        const { publicKey, chainCode } = await appETH.getAddress(
+          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+          false,
+          true
+        );
+        if (!chainCode) {
+          throw new Error("Invalid chain code");
+        }
+
+        const hdk = new HDKey();
+        hdk.publicKey = Buffer.from(publicKey, "hex");
+        hdk.chainCode = Buffer.from(chainCode, "hex");
+
+        for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
+          const address = Scanner.derive(hdk, addressIndex);
+          const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
+
+          ledgerAddresses[address] = {
+            index: addressIndex + 1,
+            address,
+            path: addressDerivationPath
+          };
+
+          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+        }
+      }
+    } else if (hasNIndex) {
+      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
+        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+
+        const { publicKey, chainCode } = await appETH.getAddress(
+          derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
+          false,
+          true
+        );
+        if (!chainCode) {
+          throw new Error("Invalid chain code");
+        }
+
+        const hdk = new HDKey();
+        hdk.publicKey = Buffer.from(publicKey, "hex");
+        hdk.chainCode = Buffer.from(chainCode, "hex");
+
+        for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
+          const address = Scanner.derive(hdk, addressIndex);
+          const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
+
+          ledgerAddresses[address] = {
+            index: addressIndex + 1,
+            address,
+            path: addressDerivationPath
+          };
+
+          progressBar.increment(1, { label: `${addressDerivationPath} | ${address}` });
+        }
+      }
+    } else {
+      const derivationPath = path;
 
       const { publicKey, chainCode } = await appETH.getAddress(
-        derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
+        derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
         false,
         true
       );
@@ -287,9 +494,9 @@ export class Scanner {
       hdk.publicKey = Buffer.from(publicKey, "hex");
       hdk.chainCode = Buffer.from(chainCode, "hex");
 
-      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
+      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
         const address = Scanner.derive(hdk, addressIndex);
-        const addressDerivationPath = derivationPath.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex.toString());
+        const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
 
         ledgerAddresses[address] = {
           index: addressIndex + 1,
@@ -301,7 +508,7 @@ export class Scanner {
       }
     }
 
-    progressBar.update(pathCount * addressCount, { label: "Finished" });
+    progressBar.update(totalPaths, { label: "Finished" });
 
     multiBar.stop();
 
@@ -315,17 +522,13 @@ export class Scanner {
   }
 
   public async scanPubkeys({
-    addressStart,
-    addressCount,
+    oCount,
+    oStart,
     hideSmallAddresses,
     skipBalance,
     inputPath,
     csvOutputDir
   }: ScanPubkeysOptions) {
-    if (addressCount === 0) {
-      throw new Error("Invalid address count");
-    }
-
     Logger.info(`Scanning all addresses from public keys and chain codes file ${inputPath}...`);
     Logger.info();
 
@@ -348,14 +551,14 @@ export class Scanner {
 
       const [publicKey, chainCode, path] = line.split(",");
 
-      if (!Scanner.verifyPath(path, ADDRESS_INDEX)) {
-        throw new Error("Missing address index component");
+      if (!Scanner.verifyPath(path, O_INDEX)) {
+        throw new Error(`Missing ${O_INDEX} index component`);
       }
 
       paths[path] = { publicKey, chainCode };
     }
 
-    this.internalScan({ paths, addressStart, addressCount, hideSmallAddresses, skipBalance, csvOutputDir });
+    this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputDir });
   }
 
   public async scanAddresses({ hideSmallAddresses, skipBalance, inputPath, csvOutputDir }: ScanAddressesOptions) {
@@ -403,8 +606,8 @@ export class Scanner {
         CliProgress.Presets.shades_classic
       );
 
-      const addressCount = Object.keys(ledgerAddresses).length;
-      const progressBar = multiBar.create(addressCount, 0);
+      const oCount = Object.keys(ledgerAddresses).length;
+      const progressBar = multiBar.create(oCount, 0);
 
       const balancePromises: Promise<void>[] = [];
 
@@ -433,7 +636,7 @@ export class Scanner {
         await Promise.all(balancePromises);
       }
 
-      progressBar.update(addressCount, { label: "Finished" });
+      progressBar.update(oCount, { label: "Finished" });
       multiBar.stop();
     }
 
@@ -448,8 +651,8 @@ export class Scanner {
 
   private async internalScan({
     paths,
-    addressStart,
-    addressCount,
+    oStart,
+    oCount,
     hideSmallAddresses,
     skipBalance,
     csvOutputDir
@@ -484,8 +687,8 @@ export class Scanner {
       CliProgress.Presets.shades_classic
     );
 
-    const pathCount = Object.keys(paths).length;
-    const progressBar = multiBar.create(addressCount * pathCount, 0);
+    const mCount = Object.keys(paths).length;
+    const progressBar = multiBar.create(oCount * mCount, 0);
 
     const amounts: AddressAmounts = {};
 
@@ -496,11 +699,7 @@ export class Scanner {
       let chainCode: string | undefined;
 
       if (isEmpty(pubkeyData)) {
-        ({ publicKey, chainCode } = await appETH.getAddress(
-          path.replace(new RegExp(ADDRESS_INDEX, "g"), ""),
-          false,
-          true
-        ));
+        ({ publicKey, chainCode } = await appETH.getAddress(path.replace(new RegExp(O_INDEX, "g"), ""), false, true));
 
         if (!chainCode) {
           throw new Error("Invalid chain code");
@@ -515,12 +714,12 @@ export class Scanner {
       hdk.publicKey = Buffer.from(publicKey, "hex");
       hdk.chainCode = Buffer.from(chainCode, "hex");
 
-      for (let addressIndex = addressStart; addressIndex < addressStart + addressCount; ++addressIndex) {
+      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
         addresses[addressIndex] = Scanner.derive(hdk, addressIndex);
       }
 
       for (const [addressIndex, address] of Object.entries(addresses)) {
-        const addressDerivationPath = path.replace(new RegExp(ADDRESS_INDEX, "g"), addressIndex);
+        const addressDerivationPath = path.replace(new RegExp(O_INDEX, "g"), addressIndex);
 
         if (skipBalance) {
           ledgerAddresses[address] = { index: Number(addressIndex) + 1, address, path: addressDerivationPath };
@@ -558,7 +757,7 @@ export class Scanner {
       }
     }
 
-    progressBar.update(addressCount * pathCount, { label: "Finished" });
+    progressBar.update(oCount * mCount, { label: "Finished" });
 
     multiBar.stop();
 
