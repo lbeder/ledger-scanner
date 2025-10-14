@@ -20,11 +20,10 @@ jest.mock("../src/utils/logger", () => ({
 
 // Mock cli-progress to avoid progress bar output during tests
 jest.mock("cli-progress", () => ({
-  MultiBar: jest.fn().mockImplementation(() => ({
-    create: jest.fn().mockReturnValue({
-      update: jest.fn(),
-      increment: jest.fn()
-    }),
+  SingleBar: jest.fn().mockImplementation(() => ({
+    start: jest.fn(),
+    update: jest.fn(),
+    increment: jest.fn(),
     stop: jest.fn()
   })),
   Presets: {

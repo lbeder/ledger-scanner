@@ -102,8 +102,6 @@ type PathData = Record<string, PubkeyData | {}>;
 interface InternalScanOptions {
   paths: PathData;
   pubkeyData?: PubkeyData[];
-  oCount: number;
-  oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   csvOutputPath?: string;
@@ -112,13 +110,69 @@ interface InternalScanOptions {
 export class Scanner {
   private provider: JsonRpcProvider;
   private balance: Balance;
+  private appETH: AppETH | null = null;
+  private path: string = "";
+  private mCount: number = 0;
+  private mStart: number = 0;
+  private nCount: number = 0;
+  private nStart: number = 0;
+  private oCount: number = 0;
+  private oStart: number = 0;
+  private hasMIndex: boolean = false;
+  private hasNIndex: boolean = false;
 
-  private static readonly BALANCES_BATCH = 100;
+  private readonly BALANCES_BATCH = 100;
 
   constructor({ rpc }: ScannerOptions) {
     this.provider = new JsonRpcProvider(rpc);
 
     this.balance = new Balance(this.provider);
+  }
+
+  private async initializeAppETH(): Promise<void> {
+    if (this.appETH) {
+      return;
+    }
+
+    let transport;
+    try {
+      transport = await TransportNodeHid.create();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Could not locate the bindings file")) {
+        throw new Error(
+          "Failed to initialize Ledger transport. This usually happens on Linux systems when native bindings are missing.\n" +
+            "Please try the following solutions:\n" +
+            "1. Install build dependencies: sudo apt-get install build-essential libudev-dev\n" +
+            "2. Rebuild native modules: pnpm rebuild-native\n" +
+            "3. If using pnpm, try: pnpm install --force\n" +
+            "4. Alternative: npm install --force\n\n" +
+            "Original error: " +
+            error.message
+        );
+      }
+      throw error;
+    }
+    this.appETH = new AppETH(transport);
+  }
+
+  private initializePathParams(
+    path: string,
+    mCount: number,
+    mStart: number,
+    nCount: number,
+    nStart: number,
+    oCount: number,
+    oStart: number
+  ) {
+    this.path = path;
+    this.mCount = mCount;
+    this.mStart = mStart;
+    this.nCount = nCount;
+    this.nStart = nStart;
+    this.oCount = oCount;
+    this.oStart = oStart;
+    this.hasMIndex = this.verifyPath(path, M_INDEX);
+    this.hasNIndex = this.verifyPath(path, N_INDEX);
   }
 
   public scan({
@@ -133,117 +187,125 @@ export class Scanner {
     skipBalance,
     csvOutputPath
   }: ScanOptions) {
-    if (oCount === 0) {
+    this.initializePathParams(path, mCount, mStart, nCount, nStart, oCount, oStart);
+
+    if (this.oCount === 0) {
       throw new Error(`Invalid ${O_INDEX} count`);
     }
 
-    if (mCount === 0) {
+    if (this.mCount === 0) {
       throw new Error(`Invalid ${M_INDEX} count`);
     }
 
-    if (!Scanner.verifyPath(path, O_INDEX)) {
+    if (!this.verifyPath(this.path, O_INDEX)) {
       throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
-    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
-
-    if (hasMIndex && mCount === 0) {
+    if (this.hasMIndex && this.mCount === 0) {
       throw new Error(`Invalid ${M_INDEX} count`);
     }
-    if (hasNIndex && nCount === 0) {
+    if (this.hasNIndex && this.nCount === 0) {
       throw new Error(`Invalid ${N_INDEX} count`);
     }
 
-    Logger.info(`Scanning all addresses starting from path ${path}...`);
+    Logger.info(`Scanning all addresses starting from path ${this.path}...`);
     Logger.info();
 
-    const oIndexes = oCount === 1 ? `${oStart}` : `${oStart}...${oStart + oCount - 1}`;
-    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
-    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
+    const oIndexes = this.oCount === 1 ? `${this.oStart}` : `${this.oStart}...${this.oStart + this.oCount - 1}`;
+    const mIndexes = this.hasMIndex
+      ? this.mCount === 1
+        ? `${this.mStart}`
+        : `${this.mStart}...${this.mStart + this.mCount - 1}`
+      : null;
+    const nIndexes = this.hasNIndex
+      ? this.nCount === 1
+        ? `${this.nStart}`
+        : `${this.nStart}...${this.nStart + this.nCount - 1}`
+      : null;
 
-    if (hasMIndex) {
-      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    if (this.hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${this.mCount})`);
     }
-    if (hasNIndex) {
-      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    if (this.hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${this.nCount})`);
     }
-    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${oCount})`);
+    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${this.oCount})`);
     Logger.info();
 
-    const pathStrings = Scanner.generatePaths(path, hasMIndex, hasNIndex, mStart, mCount, nStart, nCount);
+    const pathStrings = this.generatePaths();
     const paths: PathData = {};
     for (const pathString of pathStrings) {
       paths[pathString] = {};
     }
 
-    return this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputPath });
+    return this.internalScan({ paths, hideSmallAddresses, skipBalance, csvOutputPath });
   }
 
   public async exportPubkeys({ path, mCount, mStart, nCount, nStart, outputPath }: ExportPubKeysOptions) {
-    if (!Scanner.verifyPath(path, O_INDEX)) {
+    this.initializePathParams(path, mCount, mStart, nCount, nStart, 0, 0);
+
+    if (!this.verifyPath(this.path, O_INDEX)) {
       throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
-    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
-
-    if (hasMIndex && mCount === 0) {
+    if (this.hasMIndex && this.mCount === 0) {
       throw new Error(`Invalid ${M_INDEX} count`);
     }
-    if (hasNIndex && nCount === 0) {
+    if (this.hasNIndex && this.nCount === 0) {
       throw new Error(`Invalid ${N_INDEX} count`);
     }
 
-    Logger.info(`Exporting all public keys and chain codes starting from path ${path}...`);
+    Logger.info(`Exporting all public keys and chain codes starting from path ${this.path}...`);
     Logger.info();
 
-    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
-    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
+    const mIndexes = this.hasMIndex
+      ? this.mCount === 1
+        ? `${this.mStart}`
+        : `${this.mStart}...${this.mStart + this.mCount - 1}`
+      : null;
+    const nIndexes = this.hasNIndex
+      ? this.nCount === 1
+        ? `${this.nStart}`
+        : `${this.nStart}...${this.nStart + this.nCount - 1}`
+      : null;
 
-    if (hasMIndex) {
-      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    if (this.hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${this.mCount})`);
     }
-    if (hasNIndex) {
-      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    if (this.hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${this.nCount})`);
     }
     Logger.info();
 
-    const transport = await TransportNodeHid.create();
-    const appETH = new AppETH(transport);
+    await this.initializeAppETH();
 
-    const multiBar = new CliProgress.MultiBar(
+    const totalPaths =
+      this.hasMIndex && this.hasNIndex
+        ? this.mCount * this.nCount
+        : this.hasMIndex
+          ? this.mCount
+          : this.hasNIndex
+            ? this.nCount
+            : 1;
+    const progressBar = new CliProgress.SingleBar(
       {
         format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
         autopadding: true
       },
       CliProgress.Presets.shades_classic
     );
+    progressBar.start(totalPaths, 0);
 
-    const totalPaths = hasMIndex && hasNIndex ? mCount * nCount : hasMIndex ? mCount : hasNIndex ? nCount : 1;
-    const progressBar = multiBar.create(totalPaths, 0);
+    const data = await this.generateDerivationPaths(progressBar);
 
-    const data = await Scanner.generateDerivationPaths(
-      appETH,
-      path,
-      hasMIndex,
-      hasNIndex,
-      mStart,
-      mCount,
-      nStart,
-      nCount
-    );
-
-    progressBar.update(totalPaths, { label: "Finished" });
-
-    multiBar.stop();
+    progressBar.stop();
 
     Logger.info();
 
-    Scanner.showPublicKeys(data);
+    this.showPublicKeys(data);
 
     if (outputPath) {
-      Scanner.exportPublicKeys(outputPath, data);
+      this.exportPublicKeys(outputPath, data);
     }
   }
 
@@ -257,85 +319,77 @@ export class Scanner {
     oStart,
     outputPath
   }: ExportAddressesOptions) {
-    if (oCount === 0) {
+    this.initializePathParams(path, mCount, mStart, nCount, nStart, oCount, oStart);
+
+    if (this.oCount === 0) {
       throw new Error(`Invalid ${O_INDEX} count`);
     }
 
-    if (!Scanner.verifyPath(path, O_INDEX)) {
+    if (!this.verifyPath(this.path, O_INDEX)) {
       throw new Error(`Missing ${O_INDEX} index component`);
     }
 
-    const hasMIndex = Scanner.verifyPath(path, M_INDEX);
-    const hasNIndex = Scanner.verifyPath(path, N_INDEX);
-
-    if (hasMIndex && mCount === 0) {
+    if (this.hasMIndex && this.mCount === 0) {
       throw new Error(`Invalid ${M_INDEX} count`);
     }
-    if (hasNIndex && nCount === 0) {
+    if (this.hasNIndex && this.nCount === 0) {
       throw new Error(`Invalid ${N_INDEX} count`);
     }
 
-    Logger.info(`Exporting all addresses starting from path ${path}...`);
+    Logger.info(`Exporting all addresses starting from path ${this.path}...`);
     Logger.info();
 
-    const oIndexes = oCount === 1 ? `${oStart}` : `${oStart}...${oStart + oCount - 1}`;
-    const mIndexes = hasMIndex ? (mCount === 1 ? `${mStart}` : `${mStart}...${mStart + mCount - 1}`) : null;
-    const nIndexes = hasNIndex ? (nCount === 1 ? `${nStart}` : `${nStart}...${nStart + nCount - 1}`) : null;
+    const oIndexes = this.oCount === 1 ? `${this.oStart}` : `${this.oStart}...${this.oStart + this.oCount - 1}`;
+    const mIndexes = this.hasMIndex
+      ? this.mCount === 1
+        ? `${this.mStart}`
+        : `${this.mStart}...${this.mStart + this.mCount - 1}`
+      : null;
+    const nIndexes = this.hasNIndex
+      ? this.nCount === 1
+        ? `${this.nStart}`
+        : `${this.nStart}...${this.nStart + this.nCount - 1}`
+      : null;
 
-    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${oCount})`);
-    if (hasMIndex) {
-      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${mCount})`);
+    Logger.notice(`  ${O_INDEX} Indexes: ${oIndexes} (total of ${this.oCount})`);
+    if (this.hasMIndex) {
+      Logger.notice(`  ${M_INDEX} Indexes: ${mIndexes} (total of ${this.mCount})`);
     }
-    if (hasNIndex) {
-      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${nCount})`);
+    if (this.hasNIndex) {
+      Logger.notice(`  ${N_INDEX} Indexes: ${nIndexes} (total of ${this.nCount})`);
     }
     Logger.info();
 
-    const transport = await TransportNodeHid.create();
-    const appETH = new AppETH(transport);
+    await this.initializeAppETH();
 
-    const multiBar = new CliProgress.MultiBar(
+    const derivationPathCount =
+      this.hasMIndex && this.hasNIndex
+        ? this.mCount * this.nCount
+        : this.hasMIndex
+          ? this.mCount
+          : this.hasNIndex
+            ? this.nCount
+            : 1;
+    const totalAddresses = derivationPathCount * this.oCount;
+    const progressBar = new CliProgress.SingleBar(
       {
         format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
         autopadding: true
       },
       CliProgress.Presets.shades_classic
     );
+    progressBar.start(totalAddresses, 0);
 
-    const totalPaths =
-      hasMIndex && hasNIndex
-        ? mCount * nCount * oCount
-        : hasMIndex
-          ? mCount * oCount
-          : hasNIndex
-            ? nCount * oCount
-            : oCount;
-    const progressBar = multiBar.create(totalPaths, 0);
+    const ledgerAddresses = await this.deriveAddressesFromPaths(progressBar);
 
-    const ledgerAddresses = await Scanner.deriveAddressesFromPaths(
-      appETH,
-      path,
-      hasMIndex,
-      hasNIndex,
-      mStart,
-      mCount,
-      nStart,
-      nCount,
-      oStart,
-      oCount,
-      progressBar
-    );
-
-    progressBar.update(totalPaths, { label: "Finished" });
-
-    multiBar.stop();
+    progressBar.stop();
 
     Logger.info();
 
-    Scanner.showAddresses(ledgerAddresses, {}, false);
+    this.showAddresses(ledgerAddresses, {}, false);
 
     if (outputPath) {
-      Scanner.exportAddresses(outputPath, ledgerAddresses, true);
+      this.exportAddressesToFile(outputPath, ledgerAddresses, true);
     }
   }
 
@@ -347,6 +401,7 @@ export class Scanner {
     inputPath,
     csvOutputPath
   }: ScanPubkeysOptions) {
+    this.initializePathParams("", 0, 0, 0, 0, oCount, oStart);
     Logger.info(`Scanning all addresses from public keys and chain codes file ${inputPath}...`);
     Logger.info();
 
@@ -369,14 +424,14 @@ export class Scanner {
 
       const [publicKey, chainCode, path] = line.split(",");
 
-      if (!Scanner.verifyPath(path, O_INDEX)) {
+      if (!this.verifyPath(path, O_INDEX)) {
         throw new Error(`Missing ${O_INDEX} index component`);
       }
 
       paths[path] = { publicKey, chainCode };
     }
 
-    this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputPath });
+    this.internalScan({ paths, hideSmallAddresses, skipBalance, csvOutputPath });
   }
 
   public async scanAddresses({ hideSmallAddresses, skipBalance, inputPath, csvOutputPath }: ScanAddressesOptions) {
@@ -416,16 +471,15 @@ export class Scanner {
     const amounts: AddressAmounts = {};
 
     if (!skipBalance) {
-      const multiBar = new CliProgress.MultiBar(
+      const oCount = Object.keys(ledgerAddresses).length;
+      const progressBar = new CliProgress.SingleBar(
         {
           format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
           autopadding: true
         },
         CliProgress.Presets.shades_classic
       );
-
-      const oCount = Object.keys(ledgerAddresses).length;
-      const progressBar = multiBar.create(oCount, 0);
+      progressBar.start(oCount, 0);
 
       const balancePromises: Promise<void>[] = [];
 
@@ -443,7 +497,7 @@ export class Scanner {
 
         balancePromises.push(promise);
 
-        if (balancePromises.length >= Scanner.BALANCES_BATCH) {
+        if (balancePromises.length >= this.BALANCES_BATCH) {
           await Promise.all(balancePromises);
           balancePromises.length = 0;
         }
@@ -454,59 +508,32 @@ export class Scanner {
         await Promise.all(balancePromises);
       }
 
-      progressBar.update(oCount, { label: "Finished" });
-      multiBar.stop();
+      progressBar.stop();
     }
 
     Logger.info();
 
-    Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
+    this.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputPath) {
-      Scanner.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
+      this.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
     }
   }
 
-  private async internalScan({
-    paths,
-    oStart,
-    oCount,
-    hideSmallAddresses,
-    skipBalance,
-    csvOutputPath
-  }: InternalScanOptions) {
-    let transport;
-    try {
-      transport = await TransportNodeHid.create();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("Could not locate the bindings file")) {
-        throw new Error(
-          "Failed to initialize Ledger transport. This usually happens on Linux systems when native bindings are missing.\n" +
-            "Please try the following solutions:\n" +
-            "1. Install build dependencies: sudo apt-get install build-essential libudev-dev\n" +
-            "2. Rebuild native modules: pnpm rebuild-native\n" +
-            "3. If using pnpm, try: pnpm install --force\n" +
-            "4. Alternative: npm install --force\n\n" +
-            "Original error: " +
-            error.message
-        );
-      }
-      throw error;
-    }
-    const appETH = new AppETH(transport);
+  private async internalScan({ paths, hideSmallAddresses, skipBalance, csvOutputPath }: InternalScanOptions) {
+    await this.initializeAppETH();
 
     const ledgerAddresses: LedgerAddresses = {};
 
-    const multiBar = new CliProgress.MultiBar(
+    const pathCount = Object.keys(paths).length;
+    const progressBar = new CliProgress.SingleBar(
       {
         format: "{label} | {bar} {percentage}% | ETA: {eta}s | {value}/{total}",
         autopadding: true
       },
       CliProgress.Presets.shades_classic
     );
-
-    const mCount = Object.keys(paths).length;
-    const progressBar = multiBar.create(oCount * mCount, 0);
+    progressBar.start(this.oCount * pathCount, 0);
 
     const amounts: AddressAmounts = {};
 
@@ -517,7 +544,11 @@ export class Scanner {
       let chainCode: string | undefined;
 
       if (isEmpty(pubkeyData)) {
-        ({ publicKey, chainCode } = await appETH.getAddress(path.replace(new RegExp(O_INDEX, "g"), ""), false, true));
+        ({ publicKey, chainCode } = await this.appETH!.getAddress(
+          path.replace(new RegExp(O_INDEX, "g"), ""),
+          false,
+          true
+        ));
 
         if (!chainCode) {
           throw new Error("Invalid chain code");
@@ -532,8 +563,8 @@ export class Scanner {
       hdk.publicKey = Buffer.from(publicKey, "hex");
       hdk.chainCode = Buffer.from(chainCode, "hex");
 
-      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-        addresses[addressIndex] = Scanner.derive(hdk, addressIndex);
+      for (let addressIndex = this.oStart; addressIndex < this.oStart + this.oCount; ++addressIndex) {
+        addresses[addressIndex] = this.derive(hdk, addressIndex);
       }
 
       for (const [addressIndex, address] of Object.entries(addresses)) {
@@ -562,7 +593,7 @@ export class Scanner {
 
         balancePromises.push(promise);
 
-        if (balancePromises.length >= Scanner.BALANCES_BATCH) {
+        if (balancePromises.length >= this.BALANCES_BATCH) {
           await Promise.all(balancePromises);
 
           balancePromises.length = 0;
@@ -575,20 +606,18 @@ export class Scanner {
       }
     }
 
-    progressBar.update(oCount * mCount, { label: "Finished" });
-
-    multiBar.stop();
+    progressBar.stop();
 
     Logger.info();
 
-    Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
+    this.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputPath) {
-      Scanner.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
+      this.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
     }
   }
 
-  private static showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts, showBalance: boolean) {
+  private showAddresses(ledgerAddresses: LedgerAddresses, amounts: AddressAmounts, showBalance: boolean) {
     if (isEmpty(Object.keys(ledgerAddresses))) {
       Logger.info("No addresses to show");
 
@@ -623,7 +652,7 @@ export class Scanner {
     Logger.table(addressesTable);
   }
 
-  private static exportAddresses(outputPath: string, ledgerAddresses: LedgerAddresses, skipBalance: boolean = true) {
+  private exportAddressesToFile(outputPath: string, ledgerAddresses: LedgerAddresses, skipBalance: boolean = true) {
     const outputDir = path.dirname(outputPath);
     fs.mkdirSync(outputDir, { recursive: true });
 
@@ -650,7 +679,7 @@ export class Scanner {
     Logger.info(`Exported address data to: ${outputPath}`);
   }
 
-  private static showPublicKeys(data: Record<string, PubkeyData>) {
+  private showPublicKeys(data: Record<string, PubkeyData>) {
     if (isEmpty(Object.keys(data))) {
       Logger.info("No public keys to show");
 
@@ -671,7 +700,7 @@ export class Scanner {
     Logger.table(dataTable);
   }
 
-  private static exportPublicKeys(outputPath: string, data: Record<string, PubkeyData>) {
+  private exportPublicKeys(outputPath: string, data: Record<string, PubkeyData>) {
     if (fs.existsSync(outputPath)) {
       fs.rmSync(outputPath);
     }
@@ -691,17 +720,14 @@ export class Scanner {
     Logger.info(`Exported address data to: ${outputPath}`);
   }
 
-  private static verifyPath(path: string, component: string) {
+  private verifyPath(path: string, component: string) {
     const regex = new RegExp(`/${component}[/']?|/${component}['"]?$`);
 
     return regex.test(path);
   }
 
-  private static async getAddressData(
-    appETH: AppETH,
-    derivationPath: string
-  ): Promise<{ publicKey: string; chainCode: string }> {
-    const { publicKey, chainCode } = await appETH.getAddress(
+  private async getAddressData(derivationPath: string): Promise<{ publicKey: string; chainCode: string }> {
+    const { publicKey, chainCode } = await this.appETH!.getAddress(
       derivationPath.replace(new RegExp(O_INDEX, "g"), ""),
       false,
       true
@@ -714,14 +740,14 @@ export class Scanner {
     return { publicKey, chainCode };
   }
 
-  private static createHDKey(publicKey: string, chainCode: string): HDKey {
+  private createHDKey(publicKey: string, chainCode: string): HDKey {
     const hdk = new HDKey();
     hdk.publicKey = Buffer.from(publicKey, "hex");
     hdk.chainCode = Buffer.from(chainCode, "hex");
     return hdk;
   }
 
-  private static transferBalancesToAddresses(
+  private transferBalancesToAddresses(
     ledgerAddresses: LedgerAddresses,
     amounts: AddressAmounts,
     skipBalance: boolean
@@ -735,122 +761,98 @@ export class Scanner {
     }
   }
 
-  private static exportAddressesToCSV(
+  private exportAddressesToCSV(
     csvOutputPath: string,
     ledgerAddresses: LedgerAddresses,
     amounts: AddressAmounts,
     skipBalance: boolean
   ): void {
-    Scanner.transferBalancesToAddresses(ledgerAddresses, amounts, skipBalance);
-    Scanner.exportAddresses(csvOutputPath, ledgerAddresses, skipBalance);
+    this.transferBalancesToAddresses(ledgerAddresses, amounts, skipBalance);
+    this.exportAddressesToFile(csvOutputPath, ledgerAddresses, skipBalance);
   }
 
-  private static generatePaths(
-    path: string,
-    hasMIndex: boolean,
-    hasNIndex: boolean,
-    mStart: number,
-    mCount: number,
-    nStart: number,
-    nCount: number
-  ): string[] {
+  private generatePaths(): string[] {
     const paths: string[] = [];
 
-    if (hasMIndex && hasNIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+    if (this.hasMIndex && this.hasNIndex) {
+      for (let mIndex = this.mStart; mIndex < this.mStart + this.mCount; ++mIndex) {
+        for (let nIndex = this.nStart; nIndex < this.nStart + this.nCount; ++nIndex) {
+          const mPath = this.path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
           const nPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
           paths.push(nPath);
         }
       }
-    } else if (hasMIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        paths.push(path.replace(new RegExp(M_INDEX, "g"), mIndex.toString()));
+    } else if (this.hasMIndex) {
+      for (let mIndex = this.mStart; mIndex < this.mStart + this.mCount; ++mIndex) {
+        paths.push(this.path.replace(new RegExp(M_INDEX, "g"), mIndex.toString()));
       }
-    } else if (hasNIndex) {
-      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-        paths.push(path.replace(new RegExp(N_INDEX, "g"), nIndex.toString()));
+    } else if (this.hasNIndex) {
+      for (let nIndex = this.nStart; nIndex < this.nStart + this.nCount; ++nIndex) {
+        paths.push(this.path.replace(new RegExp(N_INDEX, "g"), nIndex.toString()));
       }
     } else {
-      paths.push(path);
+      paths.push(this.path);
     }
 
     return paths;
   }
 
-  private static async generateDerivationPaths(
-    appETH: AppETH,
-    path: string,
-    hasMIndex: boolean,
-    hasNIndex: boolean,
-    mStart: number,
-    mCount: number,
-    nStart: number,
-    nCount: number
+  private async generateDerivationPaths(
+    progressBar?: CliProgress.SingleBar
   ): Promise<Record<string, { publicKey: string; chainCode: string }>> {
     const data: Record<string, { publicKey: string; chainCode: string }> = {};
 
-    if (hasMIndex && hasNIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-          const mPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+    if (this.hasMIndex && this.hasNIndex) {
+      for (let mIndex = this.mStart; mIndex < this.mStart + this.mCount; ++mIndex) {
+        for (let nIndex = this.nStart; nIndex < this.nStart + this.nCount; ++nIndex) {
+          const mPath = this.path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
           const derivationPath = mPath.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-          const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+          const { publicKey, chainCode } = await this.getAddressData(derivationPath);
+
           data[derivationPath] = { publicKey, chainCode };
+
+          progressBar?.increment(1, { label: `Generating ${derivationPath}` });
         }
       }
-    } else if (hasMIndex) {
-      for (let mIndex = mStart; mIndex < mStart + mCount; ++mIndex) {
-        const derivationPath = path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
-        const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+    } else if (this.hasMIndex) {
+      for (let mIndex = this.mStart; mIndex < this.mStart + this.mCount; ++mIndex) {
+        const derivationPath = this.path.replace(new RegExp(M_INDEX, "g"), mIndex.toString());
+        const { publicKey, chainCode } = await this.getAddressData(derivationPath);
+
         data[derivationPath] = { publicKey, chainCode };
+
+        progressBar?.increment(1, { label: `Generating ${derivationPath}` });
       }
-    } else if (hasNIndex) {
-      for (let nIndex = nStart; nIndex < nStart + nCount; ++nIndex) {
-        const derivationPath = path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
-        const { publicKey, chainCode } = await Scanner.getAddressData(appETH, derivationPath);
+    } else if (this.hasNIndex) {
+      for (let nIndex = this.nStart; nIndex < this.nStart + this.nCount; ++nIndex) {
+        const derivationPath = this.path.replace(new RegExp(N_INDEX, "g"), nIndex.toString());
+        const { publicKey, chainCode } = await this.getAddressData(derivationPath);
+
         data[derivationPath] = { publicKey, chainCode };
+
+        progressBar?.increment(1, { label: `Generating ${derivationPath}` });
       }
     } else {
-      const { publicKey, chainCode } = await Scanner.getAddressData(appETH, path);
-      data[path] = { publicKey, chainCode };
+      const { publicKey, chainCode } = await this.getAddressData(this.path);
+
+      data[this.path] = { publicKey, chainCode };
+
+      progressBar?.increment(1, { label: `Generating ${this.path}` });
     }
 
     return data;
   }
 
-  private static async deriveAddressesFromPaths(
-    appETH: AppETH,
-    path: string,
-    hasMIndex: boolean,
-    hasNIndex: boolean,
-    mStart: number,
-    mCount: number,
-    nStart: number,
-    nCount: number,
-    oStart: number,
-    oCount: number,
-    progressBar: CliProgress.SingleBar
-  ): Promise<LedgerAddresses> {
+  private async deriveAddressesFromPaths(progressBar: CliProgress.SingleBar): Promise<LedgerAddresses> {
     const ledgerAddresses: LedgerAddresses = {};
 
-    const derivationData = await Scanner.generateDerivationPaths(
-      appETH,
-      path,
-      hasMIndex,
-      hasNIndex,
-      mStart,
-      mCount,
-      nStart,
-      nCount
-    );
+    const derivationData = await this.generateDerivationPaths(progressBar);
 
     for (const [derivationPath, { publicKey, chainCode }] of Object.entries(derivationData)) {
-      const hdk = Scanner.createHDKey(publicKey, chainCode);
+      const hdk = this.createHDKey(publicKey, chainCode);
 
-      for (let addressIndex = oStart; addressIndex < oStart + oCount; ++addressIndex) {
-        const address = Scanner.derive(hdk, addressIndex);
+      for (let addressIndex = this.oStart; addressIndex < this.oStart + this.oCount; ++addressIndex) {
+        const address = this.derive(hdk, addressIndex);
         const addressDerivationPath = derivationPath.replace(new RegExp(O_INDEX, "g"), addressIndex.toString());
 
         ledgerAddresses[address] = {
@@ -866,7 +868,7 @@ export class Scanner {
     return ledgerAddresses;
   }
 
-  private static derive(hdk: HDKey, index: number) {
+  private derive(hdk: HDKey, index: number) {
     const derivedKey = hdk.derive(`m/${index}`);
     if (!derivedKey.publicKey) {
       throw new Error("Invalid derived key");
