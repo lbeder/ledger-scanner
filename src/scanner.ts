@@ -34,6 +34,7 @@ interface LedgerAddress {
   index: number;
   path: string;
   address: Address;
+  balance?: Decimal;
 }
 
 type Asset = string;
@@ -517,7 +518,7 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, {}, false);
 
     if (outputPath) {
-      Scanner.exportAddresses(outputPath, ledgerAddresses);
+      Scanner.exportAddresses(outputPath, ledgerAddresses, true);
     }
   }
 
@@ -645,7 +646,7 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
-      Scanner.exportAddresses(csvOutputDir, ledgerAddresses);
+      Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
     }
   }
 
@@ -766,7 +767,7 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
-      Scanner.exportAddresses(csvOutputDir, ledgerAddresses);
+      Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
     }
   }
 
@@ -805,7 +806,7 @@ export class Scanner {
     Logger.table(addressesTable);
   }
 
-  private static exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses) {
+  private static exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses, skipBalance: boolean = true) {
     fs.mkdirSync(outputDir, { recursive: true });
 
     const outputPath = path.join(outputDir, Scanner.CSV_ADDRESSES_REPORT);
@@ -813,7 +814,7 @@ export class Scanner {
       fs.rmSync(outputPath);
     }
 
-    const headers = ["Index", "Address", "Path"];
+    const headers = skipBalance ? ["Index", "Address", "Path"] : ["Index", "Address", "Balance (ETH)", "Path"];
 
     fs.appendFileSync(outputPath, `${headers.join(",")}\n`);
 
@@ -822,9 +823,11 @@ export class Scanner {
     }
 
     for (const ledgerAddress of Object.values(ledgerAddresses)) {
-      const { index, path, address } = ledgerAddress;
+      const { index, path, address, balance } = ledgerAddress;
+      const balanceStr = balance ? balance.toString() : "";
+      const row = skipBalance ? [index, address, path] : [index, address, balanceStr, path];
 
-      fs.appendFileSync(outputPath, `${[index, address, path].join(",")}\n`);
+      fs.appendFileSync(outputPath, `${row.join(",")}\n`);
     }
 
     Logger.info(`Exported address data to: ${outputPath}`);
