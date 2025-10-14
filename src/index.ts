@@ -113,7 +113,7 @@ const main = async () => {
             default: false
           },
           csv: {
-            description: "The CSV reports output directory (optional)",
+            description: "The CSV output file path (optional)",
             type: "string",
             alias: "r"
           }
@@ -129,7 +129,7 @@ const main = async () => {
             oStart,
             hideSmallAddresses,
             skipBalance,
-            csvOutputDir: csv
+            csvOutputPath: csv
           });
         }
       )
@@ -291,7 +291,7 @@ const main = async () => {
             required: true
           },
           csv: {
-            description: "The CSV reports output directory (optional)",
+            description: "The CSV output file path (optional)",
             type: "string",
             alias: "r"
           }
@@ -303,7 +303,7 @@ const main = async () => {
             hideSmallAddresses,
             skipBalance,
             inputPath: input,
-            csvOutputDir: csv
+            csvOutputPath: csv
           });
         }
       )
@@ -347,7 +347,7 @@ const main = async () => {
             required: true
           },
           csv: {
-            description: "The CSV reports output directory (optional)",
+            description: "The CSV output file path (optional)",
             type: "string",
             alias: "r"
           }
@@ -357,7 +357,7 @@ const main = async () => {
             hideSmallAddresses,
             skipBalance,
             inputPath: input,
-            csvOutputDir: csv
+            csvOutputPath: csv
           });
         }
       )

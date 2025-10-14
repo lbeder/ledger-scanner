@@ -52,7 +52,7 @@ interface ScanOptions {
   oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
-  csvOutputDir?: string;
+  csvOutputPath?: string;
 }
 
 interface ExportPubKeysOptions {
@@ -81,14 +81,14 @@ interface ScanPubkeysOptions {
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   inputPath: string;
-  csvOutputDir?: string;
+  csvOutputPath?: string;
 }
 
 interface ScanAddressesOptions {
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
   inputPath: string;
-  csvOutputDir?: string;
+  csvOutputPath?: string;
 }
 
 type PubkeyData = {
@@ -106,7 +106,7 @@ interface InternalScanOptions {
   oStart: number;
   hideSmallAddresses: boolean | number;
   skipBalance: boolean;
-  csvOutputDir?: string;
+  csvOutputPath?: string;
 }
 
 export class Scanner {
@@ -114,7 +114,6 @@ export class Scanner {
   private balance: Balance;
 
   private static readonly BALANCES_BATCH = 100;
-  private static readonly CSV_ADDRESSES_REPORT = "addresses.csv";
 
   constructor({ rpc }: ScannerOptions) {
     this.provider = new JsonRpcProvider(rpc);
@@ -132,7 +131,7 @@ export class Scanner {
     oStart,
     hideSmallAddresses,
     skipBalance,
-    csvOutputDir
+    csvOutputPath
   }: ScanOptions) {
     if (oCount === 0) {
       throw new Error(`Invalid ${O_INDEX} count`);
@@ -178,7 +177,7 @@ export class Scanner {
       paths[pathString] = {};
     }
 
-    return this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputDir });
+    return this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputPath });
   }
 
   public async exportPubkeys({ path, mCount, mStart, nCount, nStart, outputPath }: ExportPubKeysOptions) {
@@ -346,7 +345,7 @@ export class Scanner {
     hideSmallAddresses,
     skipBalance,
     inputPath,
-    csvOutputDir
+    csvOutputPath
   }: ScanPubkeysOptions) {
     Logger.info(`Scanning all addresses from public keys and chain codes file ${inputPath}...`);
     Logger.info();
@@ -377,10 +376,10 @@ export class Scanner {
       paths[path] = { publicKey, chainCode };
     }
 
-    this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputDir });
+    this.internalScan({ paths, oStart, oCount, hideSmallAddresses, skipBalance, csvOutputPath });
   }
 
-  public async scanAddresses({ hideSmallAddresses, skipBalance, inputPath, csvOutputDir }: ScanAddressesOptions) {
+  public async scanAddresses({ hideSmallAddresses, skipBalance, inputPath, csvOutputPath }: ScanAddressesOptions) {
     Logger.info(`Scanning all addresses from addresses file ${inputPath}...`);
     Logger.info();
 
@@ -463,8 +462,8 @@ export class Scanner {
 
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
-    if (csvOutputDir) {
-      Scanner.exportAddressesToCSV(csvOutputDir, ledgerAddresses, amounts, skipBalance);
+    if (csvOutputPath) {
+      Scanner.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
     }
   }
 
@@ -474,7 +473,7 @@ export class Scanner {
     oCount,
     hideSmallAddresses,
     skipBalance,
-    csvOutputDir
+    csvOutputPath
   }: InternalScanOptions) {
     let transport;
     try {
@@ -584,8 +583,8 @@ export class Scanner {
 
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
-    if (csvOutputDir) {
-      Scanner.exportAddressesToCSV(csvOutputDir, ledgerAddresses, amounts, skipBalance);
+    if (csvOutputPath) {
+      Scanner.exportAddressesToCSV(csvOutputPath, ledgerAddresses, amounts, skipBalance);
     }
   }
 
@@ -624,12 +623,12 @@ export class Scanner {
     Logger.table(addressesTable);
   }
 
-  private static exportAddresses(outputDir: string, ledgerAddresses: LedgerAddresses, skipBalance: boolean = true) {
+  private static exportAddresses(outputPath: string, ledgerAddresses: LedgerAddresses, skipBalance: boolean = true) {
+    const outputDir = path.dirname(outputPath);
     fs.mkdirSync(outputDir, { recursive: true });
 
-    const outputPath = path.join(outputDir, Scanner.CSV_ADDRESSES_REPORT);
     if (fs.existsSync(outputPath)) {
-      fs.rmSync(outputPath);
+      throw new Error(`Output file already exists: ${outputPath}`);
     }
 
     const headers = skipBalance ? ["Index", "Address", "Path"] : ["Index", "Address", "Balance (ETH)", "Path"];
@@ -737,13 +736,13 @@ export class Scanner {
   }
 
   private static exportAddressesToCSV(
-    csvOutputDir: string,
+    csvOutputPath: string,
     ledgerAddresses: LedgerAddresses,
     amounts: AddressAmounts,
     skipBalance: boolean
   ): void {
     Scanner.transferBalancesToAddresses(ledgerAddresses, amounts, skipBalance);
-    Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
+    Scanner.exportAddresses(csvOutputPath, ledgerAddresses, skipBalance);
   }
 
   private static generatePaths(

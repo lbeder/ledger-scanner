@@ -88,7 +88,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).toThrow(`Invalid ${O_INDEX} count`);
     });
@@ -105,7 +105,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).toThrow(`Invalid ${M_INDEX} count`);
     });
@@ -122,7 +122,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).toThrow(`Invalid ${N_INDEX} count`);
     });
@@ -139,7 +139,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).toThrow(`Missing ${O_INDEX} index component`);
     });
@@ -156,7 +156,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).not.toThrow();
     });
@@ -173,7 +173,7 @@ describe("Scanner", () => {
           nStart: 0,
           hideSmallAddresses: false,
           skipBalance: false,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         });
       }).not.toThrow();
     });
@@ -232,7 +232,7 @@ describe("Scanner", () => {
         hideSmallAddresses: false,
         skipBalance: false,
         inputPath,
-        csvOutputDir: undefined
+        csvOutputPath: undefined
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
@@ -275,7 +275,7 @@ describe("Scanner", () => {
         hideSmallAddresses: false,
         skipBalance: true,
         inputPath,
-        csvOutputDir: undefined
+        csvOutputPath: undefined
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
@@ -283,9 +283,9 @@ describe("Scanner", () => {
       expect(Logger.table).toHaveBeenCalled();
     });
 
-    it("should export results to CSV when csvOutputDir is provided", async () => {
+    it("should export results to CSV when csvOutputPath is provided", async () => {
       const inputPath = "/tmp/test-addresses.csv";
-      const csvOutputDir = "/tmp/output";
+      const csvOutputPath = "/tmp/output/addresses.csv";
       const csvContent = `Index,Address,Path
 1,0x1234567890123456789012345678901234567890,m/44'/60'/0'/0`;
 
@@ -319,13 +319,57 @@ describe("Scanner", () => {
         hideSmallAddresses: false,
         skipBalance: true,
         inputPath,
-        csvOutputDir
+        csvOutputPath
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
-      expect(fs.mkdirSync).toHaveBeenCalledWith(csvOutputDir, { recursive: true });
+      expect(fs.mkdirSync).toHaveBeenCalledWith("/tmp/output", { recursive: true });
       expect(Logger.title).toHaveBeenCalledWith("Addresses");
       expect(Logger.table).toHaveBeenCalled();
+    });
+
+    it("should throw error when CSV output file already exists", async () => {
+      const inputPath = "/tmp/test-addresses.csv";
+      const csvOutputPath = "/tmp/existing-file.csv";
+      const csvContent = `Index,Address,Path
+1,0x1234567890123456789012345678901234567890,m/44'/60'/0'/0`;
+
+      // Mock file reading
+      const mockReadStream = {
+        on: jest.fn(),
+        [Symbol.asyncIterator]: async function* () {
+          for (const line of csvContent.split("\n")) {
+            yield line;
+          }
+        }
+      };
+
+      (fs.createReadStream as jest.Mock).mockReturnValue(mockReadStream as any);
+
+      // Mock readline
+      const readline = jest.requireMock("readline");
+      const mockRl = {
+        [Symbol.asyncIterator]: async function* () {
+          for (const line of csvContent.split("\n")) {
+            yield line;
+          }
+        }
+      };
+      readline.createInterface.mockReturnValue(mockRl);
+
+      // Mock fs.existsSync to return true for the output file
+      (fs.existsSync as jest.Mock).mockImplementation((filePath) => {
+        return filePath === csvOutputPath;
+      });
+
+      await expect(
+        scanner.scanAddresses({
+          hideSmallAddresses: false,
+          skipBalance: true,
+          inputPath,
+          csvOutputPath
+        })
+      ).rejects.toThrow(`Output file already exists: ${csvOutputPath}`);
     });
   });
 
@@ -425,7 +469,7 @@ describe("Scanner", () => {
         hideSmallAddresses: false,
         skipBalance: false,
         inputPath,
-        csvOutputDir: undefined
+        csvOutputPath: undefined
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
@@ -482,7 +526,7 @@ describe("Scanner", () => {
         hideSmallAddresses: true,
         skipBalance: false,
         inputPath,
-        csvOutputDir: undefined
+        csvOutputPath: undefined
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
@@ -529,7 +573,7 @@ describe("Scanner", () => {
         hideSmallAddresses: false,
         skipBalance: true,
         inputPath,
-        csvOutputDir: undefined
+        csvOutputPath: undefined
       });
 
       expect(fs.createReadStream).toHaveBeenCalledWith(inputPath);
@@ -614,7 +658,7 @@ describe("Scanner", () => {
           oStart: 0,
           hideSmallAddresses: false,
           skipBalance: true,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         })
       ).resolves.not.toThrow();
     });
@@ -631,7 +675,7 @@ describe("Scanner", () => {
           oStart: 0,
           hideSmallAddresses: false,
           skipBalance: true,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         })
       ).resolves.not.toThrow();
     });
@@ -648,7 +692,7 @@ describe("Scanner", () => {
           oStart: 0,
           hideSmallAddresses: false,
           skipBalance: true,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         })
       ).resolves.not.toThrow();
     });
@@ -665,7 +709,7 @@ describe("Scanner", () => {
           oStart: 0,
           hideSmallAddresses: false,
           skipBalance: true,
-          csvOutputDir: undefined
+          csvOutputPath: undefined
         })
       ).resolves.not.toThrow();
     });
