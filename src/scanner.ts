@@ -646,6 +646,14 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
+      // Transfer balance data from amounts to ledgerAddresses for CSV export
+      if (!skipBalance) {
+        for (const [address, addressAmounts] of Object.entries(amounts)) {
+          if (ledgerAddresses[address] && addressAmounts[ETH]) {
+            ledgerAddresses[address].balance = addressAmounts[ETH];
+          }
+        }
+      }
       Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
     }
   }
@@ -767,6 +775,14 @@ export class Scanner {
     Scanner.showAddresses(ledgerAddresses, amounts, !skipBalance);
 
     if (csvOutputDir) {
+      // Transfer balance data from amounts to ledgerAddresses for CSV export
+      if (!skipBalance) {
+        for (const [address, addressAmounts] of Object.entries(amounts)) {
+          if (ledgerAddresses[address] && addressAmounts[ETH]) {
+            ledgerAddresses[address].balance = addressAmounts[ETH];
+          }
+        }
+      }
       Scanner.exportAddresses(csvOutputDir, ledgerAddresses, skipBalance);
     }
   }
