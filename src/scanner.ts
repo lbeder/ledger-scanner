@@ -461,12 +461,13 @@ export class Scanner {
       if (error instanceof Error && error.message.includes("Could not locate the bindings file")) {
         throw new Error(
           "Failed to initialize Ledger transport. This usually happens on Linux systems when native bindings are missing.\n" +
-          "Please try the following solutions:\n" +
-          "1. Install build dependencies: sudo apt-get install build-essential libudev-dev\n" +
-          "2. Rebuild native modules: pnpm rebuild-native\n" +
-          "3. If using pnpm, try: pnpm install --force\n" +
-          "4. Alternative: npm install --force\n\n" +
-          "Original error: " + error.message
+            "Please try the following solutions:\n" +
+            "1. Install build dependencies: sudo apt-get install build-essential libudev-dev\n" +
+            "2. Rebuild native modules: pnpm rebuild-native\n" +
+            "3. If using pnpm, try: pnpm install --force\n" +
+            "4. Alternative: npm install --force\n\n" +
+            "Original error: " +
+            error.message
         );
       }
       throw error;
