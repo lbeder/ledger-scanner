@@ -109,19 +109,20 @@ Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
       --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
-  -p, --path                  Derivation path template. The path template should specify the address index (the "N"
-                              component) and the path index (the "M" component). For example m/44'/60'/M'/N for standard
-                              paths                                                 [string] [default: "m/44'/60'/M'/N"]
-      --o-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
-      --o-start         Starting address index                                               [number] [default: 0]
-      --m-count            Number of paths to derive and check (the "M" component)              [number] [default: 1]
-      --m-start            Starting path index                                                  [number] [default: 0]
+  -p, --path                  Derivation path template. If "M" or "N" components are present, the corresponding m- and
+                              n- parameters can be specified. Otherwise they are ignored. For example m/44'/60'/M'/N'/O
+                              for standard paths                                 [string] [default: "m/44'/60'/M'/N'/O"]
+      --m-count               Number of "M" indexes to derive and check                            [number] [default: 1]
+      --m-start               Starting "M" index                                                   [number] [default: 0]
+      --n-count               Number of "N" indexes to derive and check                            [number] [default: 1]
+      --n-start               Starting "N" index                                                   [number] [default: 0]
+      --o-count               Number of "O" indexes to derive and check                          [number] [default: 500]
+      --o-start               Starting "O" index                                                   [number] [default: 0]
   -h, --hide-small-addresses  Hide addresses with balance less than or equal to the specified amount (in ETH). If no
                               amount is specified, hides empty addresses. Using -h without parameters is equivalent to
                               -h true.                                                       [string] [default: "false"]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
-  -r, --csv                   The CSV reports output directory (optional)                                       [string]
-
+  -r, --csv                   The CSV output file path (optional)                                               [string]
 ```
 
 #### Export All Public Keys and Chain Codes
@@ -132,15 +133,17 @@ ledger-scanner export-pubkeys
 Export all public keys and chain codes
 
 Options:
-      --help          Show help                                                                                [boolean]
-      --version       Show version number                                                                      [boolean]
-      --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
-  -p, --path          Derivation path template. The path template should specify the address index (the "N" component)
-                      and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
-                                                                                    [string] [default: "m/44'/60'/M'/N"]
-      --m-count    Number of paths to derive and check (the "M" component)                      [number] [default: 1]
-      --m-start    Starting path index                                                          [number] [default: 0]
-  -o, --output        The CSV output path (optional)                                                            [string]
+      --help     Show help                                                                                     [boolean]
+      --version  Show version number                                                                           [boolean]
+      --rpc      Ethereum RPC URL                                            [string] [default: "http://localhost:8545"]
+  -p, --path     Derivation path template. If "M" or "N" components are present, the corresponding m- and n- parameters
+                 can be specified. Otherwise they are ignored. For example m/44'/60'/M'/N'/O for standard paths
+                                                                                 [string] [default: "m/44'/60'/M'/N'/O"]
+      --m-count  Number of "M" indexes to derive and check                                         [number] [default: 1]
+      --m-start  Starting "M" index                                                                [number] [default: 0]
+      --n-count  Number of "N" indexes to derive and check                                         [number] [default: 1]
+      --n-start  Starting "N" index                                                                [number] [default: 0]
+  -o, --output   The CSV output path (optional)                                                                 [string]
 ```
 
 #### Scan All Addresses via the Provided Public Keys and Chain Codes File
@@ -154,12 +157,14 @@ Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
       --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
-      --o-count         Number of addresses to derive and check (the "N" component)        [number] [default: 500]
-      --o-start         Starting address index                                               [number] [default: 0]
-  -h, --hide-empty-addresses  Hide empty addresses                                            [boolean] [default: false]
+      --o-count               Number of "O" indexes to derive and check                          [number] [default: 500]
+      --o-start               Starting "O" index                                                   [number] [default: 0]
+  -h, --hide-small-addresses  Hide addresses with balance less than or equal to the specified amount (in ETH). If no
+                              amount is specified, hides empty addresses. Using -h without parameters is equivalent to
+                              -h true.                                                       [string] [default: "false"]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -i, --input                 The CSV input path                                                     [string] [required]
-  -r, --csv                   The CSV reports output directory (optional)                                       [string]
+  -r, --csv                   The CSV output file path (optional)                                               [string]
 ```
 
 #### Export All Addresses
@@ -170,17 +175,19 @@ ledger-scanner export-addresses
 Export all addresses
 
 Options:
-      --help           Show help                                                                               [boolean]
-      --version        Show version number                                                                     [boolean]
-      --rpc            Ethereum RPC URL                                      [string] [default: "http://localhost:8545"]
-  -p, --path           Derivation path template. The path template should specify the address index (the "N" component)
-                       and the path index (the "M" component). For example m/44'/60'/M'/N for standard paths
-                                                                                    [string] [default: "m/44'/60'/M'/N"]
-      --o-count  Number of addresses to derive and check (the "N" component)               [number] [default: 500]
-      --o-start  Starting address index                                                      [number] [default: 0]
-      --m-count     Number of paths to derive and check (the "M" component)                     [number] [default: 1]
-      --m-start     Starting path index                                                         [number] [default: 0]
-  -o, --output         The CSV output path (optional)                                                           [string]
+      --help     Show help                                                                                     [boolean]
+      --version  Show version number                                                                           [boolean]
+      --rpc      Ethereum RPC URL                                            [string] [default: "http://localhost:8545"]
+  -p, --path     Derivation path template. If "M" or "N" components are present, the corresponding m- and n- parameters
+                 can be specified. Otherwise they are ignored. For example m/44'/60'/M'/N'/O for standard paths
+                                                                                 [string] [default: "m/44'/60'/M'/N'/O"]
+      --m-count  Number of "M" indexes to derive and check                                         [number] [default: 1]
+      --m-start  Starting "M" index                                                                [number] [default: 0]
+      --n-count  Number of "N" indexes to derive and check                                         [number] [default: 1]
+      --n-start  Starting "N" index                                                                [number] [default: 0]
+      --o-count  Number of "O" indexes to derive and check                                       [number] [default: 500]
+      --o-start  Starting "O" index                                                                [number] [default: 0]
+  -o, --output   The CSV output path (optional)                                                                 [string]
 ```
 
 #### Scan All Addresses via the Addresses File
@@ -194,8 +201,10 @@ Options:
       --help                  Show help                                                                        [boolean]
       --version               Show version number                                                              [boolean]
       --rpc                   Ethereum RPC URL                               [string] [default: "http://localhost:8545"]
-  -h, --hide-small-addresses  Hide empty addresses                                            [boolean] [default: false]
+  -h, --hide-small-addresses  Hide addresses with balance less than or equal to the specified amount (in ETH). If no
+                              amount is specified, hides empty addresses. Using -h without parameters is equivalent to
+                              -h true.                                                       [string] [default: "false"]
   -s, --skip-balance          Skip ETH balance check                                          [boolean] [default: false]
   -i, --input                 The CSV input path                                                     [string] [required]
-  -r, --csv                   The CSV reports output directory (optional)                                       [string]
+  -r, --csv                   The CSV output file path (optional)                                               [string]
 ```
