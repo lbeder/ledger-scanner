@@ -22,7 +22,7 @@ export const DEFAULT_M_COUNT = 1;
 export const DEFAULT_M_START = 0;
 export const DEFAULT_N_COUNT = 1;
 export const DEFAULT_N_START = 0;
-export const DEFAULT_PATH_PREFIX = `m/44'/60'/${M_INDEX}'/${N_INDEX}'/${O_INDEX}`;
+export const DEFAULT_PATH_PREFIX = `m/44'/60'/${M_INDEX}'/${O_INDEX}`;
 export const DEFAULT_O_START = 0;
 
 interface ScannerOptions {
